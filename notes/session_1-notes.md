@@ -32,7 +32,16 @@ Dentro de Linux existen diversas distribuciones como `Debian/Ubuntu`, `Red Hat/C
 
 Sin embargo, independiente de la arquitectura, hay un conjunto de herramientas y técnicas que nos permiten asegurar el buen funcionamiento de Linux, el control de accesos de usuarios, las reglas de configuración de peticiones TCP, el cifrado de los discos, carpetas y archivos y la auditoría en directorios, archivos y llamadas al sistema operativo.
 
-En esta sesión aprenderemos a configurar un sistema basado en Linux usando las distribuciones de Ubuntu y Red Hat Enterprise Linux (RHEL) para en lo siguiente aprender a administrar de forma segura a ambos. También veremos como 
+En esta sesión aprenderemos a configurar un sistema basado en Linux usando las distribuciones de Ubuntu y Red Hat Enterprise Linux (RHEL) para en lo siguiente aprender a administrar de forma segura a ambos. También veremos como configurar usuarios y grupos, limitar a usuarios administradores tipo `sudo` y el manejo de seguridad en el *firewall* con `iptables` y `nftables`.
+
+## Linux y entornos virtuales
+
+    - Configuración de un entorno virtual Linux
+    - Introducción a RHEL (Red Hat Enterprise Linux)
+    - Introducción a Ubuntu
+    - Configuración de un Servidor Amazon Linux
+
+
 
 ---
 
