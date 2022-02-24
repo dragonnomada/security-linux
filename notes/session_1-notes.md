@@ -894,6 +894,10 @@ Una vez instalado se crearán los archivos `/etc/iptables/rules.v4` y `/etc/ipta
     COMMIT
     # Completed on Thu Feb 24 18:38:53 2022
 
+* **Nota:** Puedes usar `sudo iptables-restore -t /etc/iptables/rules.v4` para verificar si no hay ningún error de sintaxis dentro del archivo.
+
+---
+
 Alternativamente podemos usar el comando `ufw` (`Uncomplicated Firewall`), para administrar más comodamente las reglas de `iptables`.
 
 > Activar `ufw`
@@ -987,11 +991,247 @@ En *RHEL/CentOS* se ha reemplazado el uso de `iptables` por `firewalld`, que es 
     feb 23 23:54:36 localhost.localdomain systemd[1]: Started firewalld - dynamic firewall daemon.
     feb 23 23:54:38 localhost.localdomain firewalld[775]: WARNING: AllowZoneDrifting is enabled.
 
-
-
 ### Zonas y servicios
 
+La forma en la que funciona `firewalld` es a través de archivos `.xml` que tienen el objetivo de brindar una forma más rica y extensa de declarar la reglas de configuración. Al estar basado en XML seremos capaces de estructurar las reglas en una manera más semántica.
 
+Las configuraciones están divididas en zonas y servicios. Dónde la carpeta `/usr/lib/firewalld` contendrá las carpetas respectivas `zones` y `services`.
+
+Las zonas establecen reglas para los puertos en escenarios distintos, por ejemplo, redes públicas, redes domésticas, redes internas, etc.
+
+> Consultar las zonas por defecto
+
+    [rhel]# ls /usr/lib/firewalld/zones
+
+    block.xml  drop.xml      home.xml      libvirt.xml    public.xml   work.xml
+    dmz.xml    external.xml  internal.xml  nm-shared.xml  trusted.xml
+
+Podemos observar múltiples zonas por defecto alojadas en la carpeta `zones`.
+
+> Contenido de la zona `home.xml`
+
+    [rhel]# cat home.xml
+
+    <?xml version="1.0" encoding="utf-8"?>
+    <zone>
+        <short>Home</short>
+        <description>For use in home areas. You mostly trust the other computers on networks to not harm your computer. Only selected incoming connections are accepted.</description>
+        <service name="ssh"/>
+        <service name="mdns"/>
+        <service name="samba-client"/>
+        <service name="dhcpv6-client"/>
+        <service name="cockpit"/>
+    </zone>
+
+Como podemos observar, el contenido de `home.xml` son etiquetas XML estructuradas de tal forma que el nodo raíz es `<zone>` y los nodos hijos son `<short>`, `<description>` y `<service>`. En este caso, para una red doméstica, se habilitan distintos servicios como `ssh`, `mdns`, `samba-client`, `dhcpv6-client` y `cockpit`. Dando como resultado un firewall de uso doméstico.
+
+Podemos igualmente consultar las zonas disponibles mediante `firewall-cmd --get-zones`.
+
+> Consultar las zonas con `firewall-cmd --get-zones`
+
+    [rhel]# firewall-cmd --get-zones
+
+    block dmz drop external home internal libvirt nm-shared public trusted work
+
+En una manera más descriptiva e informativa, podemos usar `firewall-cmd --list-all-zones`
+
+> Listar las zonas en forma descriptiva
+
+    [rhel]# firewall-cmd --list-all-zones
+
+    ...
+
+    home
+    target: default
+    icmp-block-inversion: no
+    interfaces:
+    sources:
+    services: cockpit dhcpv6-client mdns samba-client ssh
+    ports:
+    protocols:
+    forward: no
+    masquerade: no
+    forward-ports:
+    source-ports:
+    icmp-blocks:
+    rich rules:
+
+    ...
+    
+    work
+    target: default
+    icmp-block-inversion: no
+    interfaces:
+    sources:
+    services: cockpit dhcpv6-client ssh
+    ports:
+    protocols:
+    forward: no
+    masquerade: no
+    forward-ports:
+    source-ports:
+    icmp-blocks:
+    rich rules:
+
+    ...
+
+* **Nota:** Es equivalente a usar `firewall-cmd --info-zone=home` pero para todas las zonas.
+
+> Consultar la zona por defecto con `firewall-cmd --get-default-zone`
+
+    [rhel]# firewall-cmd --get-default-zone
+
+    >>> public
+
+    # Alternativamente
+
+    [rhel]# firewall-cmd --get-active-zones
+
+    libvirt
+        interfaces: virbr0
+    public
+        interfaces: enp0s3
+
+Se suele denominar DMZ (`Desmilitarized Zone` o *Zona desmilitarizada*) al tipo de cortafuegos (firewall) que permite y brinda servicios hacía la red externa, pero no tiene acceso a la red interna. Esta es muy utilizada en escenarios empresariales, para salvaguardar la red interna en caso de una intrusión externa (la cuál queda atrapada en la zona desmilitarizada).
+
+> Establecer la zona `dmz` por defecto con `firewall-cmd --set-default-zone=<zone>`
+
+    [rhel]# firewall-cmd --set-default-zone=dmz
+
+    >>> success
+
+    # Archivo `dmz.xml`
+
+    [rhel]# cat dmz.xml
+    
+    <?xml version="1.0" encoding="utf-8"?>
+    <zone>
+        <short>DMZ</short>
+        <description>For computers in your demilitarized zone that are publicly-accessible with limited access to your internal network. Only selected incoming connections are accepted.</description>
+        <service name="ssh"/>
+    </zone>
+
+    # Información de la zona `dmz`
+
+    [rhel]# firewall-cmd --info-zone=dmz
+
+    dmz (active)
+        target: default
+        icmp-block-inversion: no
+        interfaces: enp0s3
+        sources:
+        services: ssh
+        ports:
+        protocols:
+        forward: no
+        masquerade: no
+        forward-ports:
+        source-ports:
+        icmp-blocks:
+        rich rules:
+
+    # Verificar la zona por defecto
+
+    [rhel]# firewall-cmd --get-default-zone
+    
+    >>> dmz
+
+---
+
+Los servicios (`services`) a diferencia de las zonas, especifican qué puertos deberían abrirse y bajo que reglas. Estos brindan precisamente la capacidad de habilitar puertos para servicios específicos del sistema o servicios web. Por ejemplo, si el servidor utiliza apache y necesita abrir una decena de puertos con ciertas restricciones.
+
+Los servicios se encuentran bajo la carpeta `/usr/lib/firewalld/services`
+
+> Listar los servicios de `firewalld`
+
+    [rhel]# firewall-cmd --get-services
+
+    RH-Satellite-6 RH-Satellite-6-capsule amanda-client amanda-k5-client amqp amqps apcupsd audit bacula bacula-client bb ...
+
+Hay bastantes servicios disponibles por defecto. Podemos consultar la información de los servicios mediante `firewall-cmd --info-service=<service>`.
+
+> Consultar la información de un servicio con `firewall-cmd --info-service=<service>`
+
+    [rhel]# firewall-cmd --info-service=mysql
+
+    mysql
+        ports: 3306/tcp
+        protocols:
+        source-ports:
+        modules:
+        destination:
+        includes:
+        helpers:
+
+Ahora revisemos algunas operaciones comúnes para trabajar las zonas y los servicios.
+
+> Agregar un servicio a una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --add-service=<service>
+
+> Quitar un servicio de una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --remove-service=<service>
+
+> Listar los servicios de una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --list-services
+
+> Agregar un servicio a una zona de manera permanente
+
+    SINTAXIS: firewall-cmd --zone=<zone> --permanent --add-service=<service>
+
+    # Nota: Al hacer permanente un servicio, este perdurará tras el reinicio.
+
+> Listar los servicios permanentes de una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --permanent --list-services
+
+    # Advertencia: Al no marcar un servicio permanente, este sólo se estará durante la sesión, más no al reinicio.
+
+> Abrir un puerto en una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --add-port=<port>/<protocol>
+
+    SINTAXIS: firewall-cmd --zone=<zone> --add-port=<port start>-<port end>/<protocol>
+
+    SINTAXIS: firewall-cmd --zone=<zone> --permanent --add-port=<port start>-<port end>/<protocol>
+
+> Listar los puertos de una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --permanent --list-ports
+
+> Recargar zonas y servicios
+
+    SINTAXIS: firewall-cmd --reload
+
+    # Nota: Aplica los cambios a la sesión actual.
+
+> Crear una nueva zona permanente
+
+    SINTAXIS: firewall-cmd --permanent --new-zone=<zone>
+
+> Ver las zonas permanentes
+
+    SINTAXIS: firewall-cmd --permanent --get-zones
+
+> Ver la información de una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --list-all
+
+> Cambiar la interfaz de una zona
+
+    SINTAXIS: firewall-cmd --zone=<zone> --change-interface=<ifc>
+
+    # Nota: Puedes usar `ifconfig -a` para ver la lista de interfaces de red (sustituible en `<ifc>`).
+
+    # Observación: Al aplicar el cambio de interfaz, la zona se volverá la zona activa en esa interface (consulta las zonas activas con `firewall-cmd --get-active-zones`).
+
+> Reiniciar la red y el firewall a través del controlador de servicios
+
+    SINTAXIS:
+        systemctl restart network
+        systemctl reload firewalld
 
 ### Introducción a nftables
 
@@ -1001,6 +1241,7 @@ En *RHEL/CentOS* se ha reemplazado el uso de `iptables` por `firewalld`, que es 
 * [https://linux.die.net/man/8/iptables](https://linux.die.net/man/8/iptables)
 * [https://www.booleanworld.com/depth-guide-iptables-linux-firewall/](https://www.booleanworld.com/depth-guide-iptables-linux-firewall/)
 * [https://www.digitalocean.com/community/tutorials/how-to-implement-a-basic-firewall-template-with-iptables-on-ubuntu-14-04](https://www.digitalocean.com/community/tutorials/how-to-implement-a-basic-firewall-template-with-iptables-on-ubuntu-14-04)
+* [https://www.digitalocean.com/community/tutorials/how-to-set-up-a-firewall-using-firewalld-on-centos-7](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-firewall-using-firewalld-on-centos-7)
 
 ---
 
