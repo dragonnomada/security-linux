@@ -615,7 +615,7 @@ Mediante el conjunto de comandos (`Cmnd_Alias`) podemos establecer el alcance de
 
     ---
     # Conjunto de comandos
-    Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/yum
+    Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/yum, /usr/bin/systemctl status *
 
     # Conjunto de usuarios
     User_Alias SOFTWAREADMINS = susy, sara
@@ -632,23 +632,137 @@ Mediante el conjunto de comandos (`Cmnd_Alias`) podemos establecer el alcance de
 
     # <user>    - El usuario o conjunto de usuarios/grupos
     # <host>    - El servidor o conjunto de servidores/direcciones
-    # <account> - El usuario o conjuto de usuarios que ejecutarán los comandos
+    # <account> - El usuario o conjuto de usuarios que ejecutarán los comandos (Se usará `sudo -u <account>`)
     # <tag>     - La etiqueta opcional si requiere o no contraseña (`PASSWD` o `NOPASSWD`)
     # <command> - El comando o conjunto de comandos que serán ejecutados
+
+Finalmente podemos establecer el tiempo que tendrán los usuarios para reingresar la contraseña (por defecto 5 minutos).
+
+> Establecer el tiempo para solicitar nuevamente la contraseña con `Defaults[:<user>] timestamp_timeout <time>`
+
+    # Solicita la contraseña inmediatamente
+    Defaults timestamp_timeout = 0
+
+    # Solicita la contraseña tras 10 minutos para el usuario `ana`
+    Defaults:ana timestamp_timeout = 10
+
+    # Omite la autenticación para el usuario `pedro`
+    Defaults:pedro !authenticate
 
 [REFERENCIAS]
 
 * [https://help.ubuntu.com/community/Sudoers](https://help.ubuntu.com/community/Sudoers)
-
+* [https://www.sudo.ws/docs/man/1.8.15/sudoers.man/](https://www.sudo.ws/docs/man/1.8.15/sudoers.man/)
 
 ### Prevención de ataques de fuerza bruta en contraseñas
 
+Podemos usar el módulo `pam_tally2` instalado por defecto en *Debian/Ubuntu* o `faillock` en *RHEL/CentOS*, para bloquear los accesos por contraseña, cuándo está alcance un límite de intentos. A través del archivo `/etc/pam.d/login` podemos agregar las instrucciones necesarias para `deny=<intents>`. Esto prevendrá que los usuarios sigan estableciendo contraseñas no válidas, cuándo se alacanzó el máximo de intentos.
 
+[UBUNTU]
+
+> Editar el archivo `/etc/pam.d/login` y ubicar el comentario con `TTY` o `pam_selinux.so`
+
+    [ubuntu]$ sudo nano /etc/pam.d/login
+
+    # SELinux needs to intervene at login time to ensure that the process
+    # starts in the proper default security context. Only sessions which are
+    # intended to run in the user's context should be run after this.
+    # pam_selinux.so changes the SELinux context of the used TTY and configures
+    # SELinux in order to transition to the user context with the next execve()
+    # call.
+    session [success=ok ignore=ignore module_unknown=ignore default=bad] pam_selinux.so open
+    # When the module is present, "required" would be sufficient (When SELinux
+    # is disabled, this returns success.)
+
+    # >>> ESTABLECER EL MÁXIMO DE INTENTOS Y EL TIEMPO DE DESBLOQUEO
+    auth required pam_tally2.so deny=4 even_deny_root unlock_time=60
+
+> Ver los intentos fallidos mediante `pam_tally2 [--user=<user>]`
+
+    [ubuntu]$ sudo pam_tally2
+
+    --- SALIDA ---
+
+    Login           Failures Latest failure     From
+    demo                8    02/24/22 07:55:25
+
+> Reiniciar un bloqueo mediante `sudo pam_tally2 --user=<user> --reset`
+
+    [ubuntu]$ sudo pam_tally2 --user=demo --reset
+
+[CentOS]
+
+> Editar los archivos `/etc/pam.d/password-auth` y `/etc/pam.d/system-auth` antes y después de `pam_unix.so`
+
+    [rhel]# nano /etc/pam.d/password-auth
+
+    auth        required                                     pam_env.so
+    ...
+    auth        required                                     pam_faillock.so audit deny=3 unlock_time=60
+    auth        sufficient                                   pam_unix.so nullok
+    auth        [default=die] pam_faillock.so                authfail audit deny=3 unlock_time=60
+    ...
+
+    account     required                                     pam_faillock.so
+
+    [rhel]# nano /etc/pam.d/system-auth
+
+    auth        required                                     pam_env.so
+    ...
+    auth        required                                     pam_faillock.so audit deny=3 unlock_time=60
+    auth        sufficient                                   pam_unix.so nullok
+    auth        [default=die] pam_faillock.so                authfail audit deny=3 unlock_time=60
+    ...
+
+    account     required                                     pam_faillock.so
+ 
+> Ver los intentos fallidos mediante `faillock [--user=<user>]`
+
+    [rhel]# faillock 
+
+    --- SALIDA ---
+
+    demo:
+    When                Type  Source                                           Valid
+    2022-02-24 03:29:52 TTY   tty1                                                 V
+    2022-02-24 03:24:29 TTY   tty1                                                 I
+    2022-02-24 03:24:40 TTY   tty1                                                 I
+    2022-02-24 03:28:41 TTY   tty1                                                 I
+    2022-02-24 03:28:50 TTY   tty1                                                 I
+
+> Reiniciar un bloqueo mediante `sudo faillock --user=<user> --reset`
+
+    [rhel]# faillock --user=demo --reset
 
 ### Bloquear de cuentas de usuarios
 
+Podemos considerar bloquear usuarios o contraseñas cuándo queramos inactivar temporalmente a los mismos. Por ejemplo, en el caso de un administrador que esté de vacaciones o suspendido.
 
+Para lograrlo podemos usar los comandos `usermod -L <user>` para bloquear al usuario o `passwd -l <user>` para bloquear su contraseña. Ambos comandos tienen el mismo sentido de impedir su acceso. Para desbloquearlos podemos usar `usermod -U <user>` o `passwd -u <user>`.
 
+El efecto de bloquear un usuario será que en el archivo `/etc/shadow` se antepondrá un `!` antes de la contraseña del usuario, indicando que el usuario está bloqueado.
+
+> Bloquear usuarios
+
+    # Bloquear al usuario `demo` mediante `usermod`
+
+    [linux]# usermod -L demo
+
+    # Bloquear al usuario `demo` mediante `passwd`
+
+    [linux]# passwd -l demo
+
+> Desbloquar usuarios
+
+    # Desbloquear al usuario `demo` mediante `usermod`
+
+    [linux]# usermod -L demo
+
+    # Desbloquear al usuario `demo` mediante `passwd`
+
+    [linux]# passwd -l demo
+
+* **Nota:** Puedes usar `crontab` para programar bloqueos y desbloqueos automáticos de usuarios. Esto sería útil para horarios laborales o de mantenimiento programados.
 
 ## Seguridad del Servidor y el Firewall
 
