@@ -64,17 +64,21 @@ En la siguiente imagen podemos observar una nueva imagen de linux en Virtual Box
 
 La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise-linux-8) de *RedHat*, es una de las más populares dentro de la industría, debido a sus capacidades sobre Cloud Computing y demás características Enterprise disponibles bajo las licencias establecidas. Al ser una distribución de Linux comercial, cuenta con gran soporte y una empresa de respaldo que invierte fuertes sumas en seguridad y características superiores a cualquier distribución tradicional de Linux. Esta es una gran alternativa para empresas y corporativos.
 
+La gestión de paquetes en *RHEL* se puede lograr mediante el gestor de paquetes *YUM* o directamente con el adminstrador de paquetes *RPM* (*RedHat Package Manager*). El administrador de paquetes principal es *RPM* y *YUM* será un gestor que facilite el uso del administrador de paquetes *RPM*.
+
+A continuación revisaremos algunos comandos esenciales para el control de paquetes en *RHEL*.
+
 > Instalar paquetes a través de `yum`
 
-    [RHEL]$ sudo yum install python3
+    [rhel]$ sudo yum install python3
 
 > Ver paquetes instalados con `rpm -qa`
 
-    [RHEL]$ rpm -qa
+    [rhel]$ rpm -qa
 
     # Filtrar los paquetes que contengan `python3`
 
-    [RHEL]$ rpm -qa | grep python3
+    [rhel]$ rpm -qa | grep python3
 
     --- SALIDA ---
     
@@ -85,7 +89,7 @@ La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise
 
 > Obtener la información de un paquete con `rpm -qi <package>`
 
-    [RHEL]$ rpm -qi python36-*
+    [rhel]$ rpm -qi python36-*
 
     --- SALIDA ---
 
@@ -116,7 +120,7 @@ La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise
 
 > Ver la lista de ficheros asociados a un paquete con `rpm -ql <package>`
 
-    [RHEL]$ rpm -ql python36-3.6.*
+    [rhel]$ rpm -ql python36-3.6.*
 
     --- SALIDA ---
 
@@ -138,7 +142,7 @@ La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise
 
 > Ver la lista de ficheros de configuración de un paquete con `rpm -qc <package>`
 
-    [RHEL]$ rpm -qc bash
+    [rhel]$ rpm -qc bash
 
     --- SALIDA ---
 
@@ -148,7 +152,7 @@ La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise
 
 > Listar los paquetes instalados con yum usando `yum list --installed`
 
-    [RHEL]$ yum list --installed | grep python3
+    [rhel]$ yum list --installed | grep python3
 
     --- SALIDA ---
 
@@ -161,7 +165,7 @@ La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise
 
 > Desisntalar un paquete con `rpm -e <package>` y `yum remove <package>`
 
-    [RHEL]$ sudo yum remove python36.x86_64
+    [rhel]$ sudo yum remove python36.x86_64
 
     --- SALIDA ---
 
@@ -184,9 +188,189 @@ La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise
 
 ### Introducción a Ubuntu
 
+La distribución de [Ubuntu](https://ubuntu.com) de *Canoical*, es una de las más populares a nivel usuario, por su facilidad de uso y gran soporte de paquetes, gracias a que está basada en [Debian](https://www.debian.org). Una de las principales características que le diferencias de otras distribuciones no comerciales, es el amplio soporte dado por *Canonical* y es una gran alternativa a infraestructuras no comerciales para empresas medianas y gobiernos.
+
+La administración y gestión de paquetes en *Ubuntu* puede lograrse mediante *APT* (*Advanced Package Tool*) y *DPKG*.
+
+A continuación revisaremos algunos comandos esenciales para el control de paquetes en *Ubuntu*.
+
+> Actualizar el índice de paquetes con `apt update`
+
+    [ubuntu]$ sudo apt update
+
+    --- SALIDA ---
+
+    Hit:1 http://mx.archive.ubuntu.com/ubuntu focal InRelease
+    Hit:2 http://mx.archive.ubuntu.com/ubuntu focal-updates InRelease
+    Hit:3 http://mx.archive.ubuntu.com/ubuntu focal-backports InRelease
+    Hit:4 http://mx.archive.ubuntu.com/ubuntu focal-security InRelease
+    Reading package lists... Done
+    Building dependency tree
+    Reading state information... Done
+    44 packages can be upgraded. Run 'apt list --upgradable' to see them.
+
+> Listar los paquetes actualizables
+
+    [ubuntu]$ apt list --upgradable
+
+    --- SALIDA ---
+
+    Listing... Done
+    alsa-ucm-conf/focal-updates 1.2.2-1ubuntu0.11 all [upgradable from: 1.2.2-1ubuntu0.9]
+    base-files/focal-updates 11ubuntu5.5 amd64 [upgradable from: 11ubuntu5.4]
+    cloud-init/focal-updates 21.4-0ubuntu1~20.04.1 all [upgradable from: 21.2-3-g899bfaa9-0ubuntu2~20.04.1]
+    ...
+
+> Actualizar los paquetes instalados con `apt upgrade`
+
+    # Listar los paquetes actualizables
+
+    [ubuntu]$ apt list --upgradable
+
+    # Actualizar todos los paquetes
+
+    [ubuntu]$ sudo apt upgrade
+    
+    # Actualizar un paquete en específico
+
+    [ubuntu]$ sudo apt upgrade <package>
+
+    # Instalar versión más reciente de un paquete
+
+    [ubuntu]$ sudo apt install --only-upgrade <package>
+
+> Instalar nuevos paquetes con `apt install <package>`
+
+    [ubuntu]$ sudo apt install <package>
+
+    # Instalar múltiples paquetes
+
+    [ubuntu]$ sudo apt install <package 1> <package 2> ...
+
+    # Instalar desde un archivo `.deb`
+
+    sudo apt install <path>/<file>.deb
+
+> Ver la información de un paquete con `apt show <package>`
+
+    [ubuntu]$ apt show python3
+
+    --- SALIDA ---
+
+    Package: python3
+    Version: 3.8.2-0ubuntu2
+    Priority: important
+    Section: python
+    Source: python3-defaults
+    Origin: Ubuntu
+    Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+    Original-Maintainer: Matthias Klose <doko@debian.org>
+    Bugs: https://bugs.launchpad.net/ubuntu/+filebug
+    Installed-Size: 194 kB
+    Provides: python3-profiler
+    Pre-Depends: python3-minimal (= 3.8.2-0ubuntu2)
+    Depends: python3.8 (>= 3.8.2-1~), libpython3-stdlib (= 3.8.2-0ubuntu2)
+    Suggests: python3-doc (>= 3.8.2-0ubuntu2), python3-tk (>= 3.8.2-1~), python3-venv (>= 3.8.2-0ubuntu2)
+    Replaces: python3-minimal (<< 3.1.2-2)
+    Homepage: https://www.python.org/
+    Task: minimal, ubuntu-core
+    Download-Size: 47.6 kB
+    APT-Manual-Installed: no
+    APT-Sources: http://mx.archive.ubuntu.com/ubuntu focal/main amd64 Packages
+    Description: interactive high-level object-oriented language (default python3 version)
+    Python, the high-level, interactive object oriented language,
+    includes an extensive class library with lots of goodies for
+    network programming, system administration, sounds and graphics.
+    ...
+
+> Ver los archivos de un paquete con `dpkg -L <package>`
+
+    [ubuntu]$ dpkg -L python3
+
+    --- SALIDA ---
+    /.
+    /usr
+    /usr/bin
+    /usr/lib
+    /usr/lib/valgrind
+    /usr/lib/valgrind/python3.supp
+    /usr/share
+    /usr/share/doc
+    /usr/share/doc/python3
+    /usr/share/doc/python3/copyright
+    /usr/share/doc/python3/python-policy.dbk.gz
+    /usr/share/doc/python3/python-policy.html
+    /usr/share/doc/python3/python-policy.html/build_dependencies.html
+    /usr/share/doc/python3/python-policy.html/embed.html
+    /usr/share/doc/python3/python-policy.html/index.html
+    /usr/share/doc/python3/python-policy.html/module_packages.html
+    /usr/share/doc/python3/python-policy.html/other.html
+    /usr/share/doc/python3/python-policy.html/packaging_tools.html
+    /usr/share/doc/python3/python-policy.html/programs.html
+    /usr/share/doc/python3/python-policy.html/python.html
+    /usr/share/doc/python3/python-policy.html/python3.html
+    /usr/share/doc/python3/python-policy.html/upgrade.html
+    /usr/share/doc/python3/python-policy.txt.gz
+    /usr/share/doc/python3.8
+    ...
+
+> Ver los archivos de configuración de un paquete
+
+    [ubuntu]$ ls /var/lib/dpkg/info/*.conffiles | grep bash
+
+    --- SALIDA ---
+
+    /var/lib/dpkg/info/bash-completion.conffiles
+    /var/lib/dpkg/info/bash.conffiles
+
+    # Ver el contenido de los archivos
+
+    [ubuntu]$ cat $(ls /var/lib/dpkg/info/*.conffiles | grep bash)
+
+    --- SALIDA ---
+
+    /etc/bash_completion
+    /etc/profile.d/bash_completion.sh
+    /etc/bash.bashrc
+    /etc/skel/.bash_logout
+    /etc/skel/.bashrc
+    /etc/skel/.profile
+
+> Eliminar paquetes paquetes con `apt remove <package>`
+
+    [ubuntu]$ sudo apt remove python3
+
+    # Eliminar también los archivos residuales
+
+    [ubuntu]$ sudo apt purge <package>
+
 ### Configuración de un Servidor Amazon Linux
 
+[Amazon](https://aws.amazon.com/es/ec2/) provee un conjunto de arquitecturas e infraestructura basadas en la nube y el *Cómputo en la Nube* que permiten configurar rápidamente servidores basados en diversas distribuciones de Windows y Linux de forma sencilla.
 
+Una de las principales características es que configura las mínimas reglas de seguridad para brindar servidores seguros.
+
+Al configurar un servidor de Amazon podemos elegir el tipo de servidor, si será virtual o dedicado y también la ubicación, distribución y demás aspectos.
+
+En la siguiente imagen se muestra la interfaz para el lanzamiento de nuevas instancias tipo Amazon EC2 listas para la producción.
+
+![Lanzamiento de nuevas instancias en Amazon EC2](../assets/s1.2.png)
+
+Durante la configuración de la instancia podremos crear un archivo de claves `.pem` para conectarnos a las nuevas instancias. Para hacerlo bastará crear una conexión remota *SSH* y apuntar a la IP asignada de la instancia, el usuario por defecto para la distribución y el archivo `.pem` creado.
+
+> Conectar una instancia vía SSH de Amazon EC2
+
+    [host]$ ssh -i "<path>/<file>.pem" <user>@<ip>
+
+    # Dónde:
+    #   <path> - Ruta hacía el archivo .pem
+    #   <file> - Nombre del archivo .pem
+    #   <user> - Nombre del usuario por defecto
+    #   <ip>   - IP, Host o DNS de la instancia
+
+En la siguiente imagen se observa la conexión vía SSH desde [MobaXterm](https://mobaxterm.mobatek.net).
+
+![MobaXterm](../assets/s1.3.png)
 
 ## Seguridad en Cuentas de Usuarios y Grupos
 
@@ -196,6 +380,31 @@ La distribución [Red Hat Enterprise Linux](https://www.redhat.com/es/enterprise
     - Usuarios sudo limitados
     - Prevención de ataques de fuerza bruta en contraseñas
     - Bloquear de cuentas de usuarios
+
+### Usuarios administrativos
+
+
+
+### El grupo predefinido admin
+
+
+
+### El archivo de políticas sudo
+
+
+
+### Usuarios sudo limitados
+
+
+
+### Prevención de ataques de fuerza bruta en contraseñas
+
+
+
+### Bloquear de cuentas de usuarios
+
+
+
 
 ## Seguridad del Servidor y el Firewall
 
