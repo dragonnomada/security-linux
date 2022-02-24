@@ -95,3 +95,25 @@ He impartido cursos de Programación Avanzada en múltiples lenguajes de program
 	- Auditoría de los servicios de red con `nmap`
 	- Reseteo de la contraseña
 	- Prevención en la edición de parámetros del kernel
+
+---
+
+## Lista de Software y Hardware
+
+### Equipo
+
+* Sistema Operativo **Centos 7+** (recomentado 8+), **Ubuntu 16+** (recomendado 20.04+, **RHEL 7+** (recomendado 8+) ó **Window 7+** (recomendado 10+).
+
+* Contar con al menos 4GB de RAM (recomendado 8GB+)
+
+* Contar con al menos 20GB de HDD (recomendado 40GB+ SSD)
+
+### Software
+
+**Virtual Box 6+** - https://www.virtualbox.org
+
+**Ubuntu Server 20.04 ISO** - https://releases.ubuntu.com/20.04.3/ubuntu-20.04.3-live-server-amd64.iso
+
+**CentOS 8 Stream ISO** - http://ftp.ussg.iu.edu/linux/centos/8-stream/isos/x86_64/CentOS-Stream-8-x86_64-latest-boot.iso
+
+**MobaXterm Portable** - https://download.mobatek.net/2152021112100754/MobaXterm_Portable_v21.5.zip

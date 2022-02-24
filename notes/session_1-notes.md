@@ -79,8 +79,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
     # Filtrar los paquetes que contengan `python3`
 
     [rhel]$ rpm -qa | grep python3
-
-    --- SALIDA ---
     
     python3-unbound-1.7.3-15.el8.x86_64
     python3-libsemanage-2.9-6.el8.x86_64
@@ -90,8 +88,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 > Obtener la información de un paquete con `rpm -qi <package>`
 
     [rhel]$ rpm -qi python36-*
-
-    --- SALIDA ---
 
     Name        : python36
     Version     : 3.6.8
@@ -122,8 +118,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 
     [rhel]$ rpm -ql python36-3.6.*
 
-    --- SALIDA ---
-
     /usr/bin/easy_install-3
     /usr/bin/pip-3
     /usr/bin/pip3
@@ -144,8 +138,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 
     [rhel]$ rpm -qc bash
 
-    --- SALIDA ---
-
     /etc/skel/.bash_logout
     /etc/skel/.bash_profile
     /etc/skel/.bashrc
@@ -153,8 +145,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 > Listar los paquetes instalados con yum usando `yum list --installed`
 
     [rhel]$ yum list --installed | grep python3
-
-    --- SALIDA ---
 
     python3-audit.x86_64        3.0-0.17...     @anaconda
     python3-babel.noarch        2.5.1-5.el8     @koji-override-1
@@ -166,8 +156,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 > Desisntalar un paquete con `rpm -e <package>` y `yum remove <package>`
 
     [rhel]$ sudo yum remove python36.x86_64
-
-    --- SALIDA ---
 
     Dependencies resolved.
     ==================================================================================================================================================
@@ -198,8 +186,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 
     [ubuntu]$ sudo apt update
 
-    --- SALIDA ---
-
     Hit:1 http://mx.archive.ubuntu.com/ubuntu focal InRelease
     Hit:2 http://mx.archive.ubuntu.com/ubuntu focal-updates InRelease
     Hit:3 http://mx.archive.ubuntu.com/ubuntu focal-backports InRelease
@@ -212,8 +198,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 > Listar los paquetes actualizables
 
     [ubuntu]$ apt list --upgradable
-
-    --- SALIDA ---
 
     Listing... Done
     alsa-ucm-conf/focal-updates 1.2.2-1ubuntu0.11 all [upgradable from: 1.2.2-1ubuntu0.9]
@@ -255,8 +239,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 
     [ubuntu]$ apt show python3
 
-    --- SALIDA ---
-
     Package: python3
     Version: 3.8.2-0ubuntu2
     Priority: important
@@ -286,8 +268,6 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 > Ver los archivos de un paquete con `dpkg -L <package>`
 
     [ubuntu]$ dpkg -L python3
-
-    --- SALIDA ---
     /.
     /usr
     /usr/bin
@@ -318,16 +298,12 @@ A continuación revisaremos algunos comandos esenciales para el control de paque
 
     [ubuntu]$ ls /var/lib/dpkg/info/*.conffiles | grep bash
 
-    --- SALIDA ---
-
     /var/lib/dpkg/info/bash-completion.conffiles
     /var/lib/dpkg/info/bash.conffiles
 
     # Ver el contenido de los archivos
 
     [ubuntu]$ cat $(ls /var/lib/dpkg/info/*.conffiles | grep bash)
-
-    --- SALIDA ---
 
     /etc/bash_completion
     /etc/profile.d/bash_completion.sh
@@ -400,7 +376,7 @@ El primer archivo que debe ser familiar para cualquier administrador es `/etc/su
 
     [linux]$ sudo visudo
 
-    --- SALIDA [CENTOS] ---
+    --- [CENTOS] ---
 
     ...
     ## Allow root to run any commands anywhere
@@ -414,7 +390,7 @@ El primer archivo que debe ser familiar para cualquier administrador es `/etc/su
     %wheel  ALL=(ALL)       ALL
     ...
 
-    --- SALIDA [UBUNTU] ---
+    --- [UBUNTU] ---
 
     ...
     # User privilege specification
@@ -437,17 +413,17 @@ En *RHEL/CentOS* el grupo de administradores por defecto es llamado `wheel`, mie
 
     [linux]# groups
 
-    --- SALIDA--
+     SALIDA--
 
     root
 
     [linux]$ groups
 
-    --- SALIDA [CENTOS] ---
+    --- [CENTOS] ---
 
     demo wheel
 
-    --- SALIDA [UBUNTU] ---
+    --- [UBUNTU] ---
 
     demo sudo
 
@@ -502,8 +478,6 @@ Para revisar la lista de los usuarios podemos revisar el archivo `/etc/passwd`.
 > Ver los usuarios en `/etc/passwd`
 
     [linux]# cat /etc/passwd
-
-    --- SALIDA ---
     ubuntu:x:1000:1000:Ubuntu Admin:/home/ubuntu:/bin/bash
     ...
     demo:x:1001:1001::/home/demo:/bin/bash
@@ -681,8 +655,6 @@ Podemos usar el módulo `pam_tally2` instalado por defecto en *Debian/Ubuntu* o 
 
     [ubuntu]$ sudo pam_tally2
 
-    --- SALIDA ---
-
     Login           Failures Latest failure     From
     demo                8    02/24/22 07:55:25
 
@@ -719,8 +691,6 @@ Podemos usar el módulo `pam_tally2` instalado por defecto en *Debian/Ubuntu* o 
 > Ver los intentos fallidos mediante `faillock [--user=<user>]`
 
     [rhel]# faillock 
-
-    --- SALIDA ---
 
     demo:
     When                Type  Source                                           Valid
@@ -769,6 +739,268 @@ El efecto de bloquear un usuario será que en el archivo `/etc/shadow` se antepo
     - Introducción a iptables
     - Zonas y servicios
     - Introducción a nftables
+
+### Introducción a iptables
+
+Una capa de seguridad importante dentro del sistema operativo es el *"cortafuegos"* o *firewall*. Este permitirá bloquear puertos y conexiones, impidiendo el acceso no deseado de intrusos al sistema. Este mecanismo actúa de manera independiente y debe ser considerado para prevenir el robo de información o acceso no deseado al sistema.
+
+Los `iptables` son conjuntas de reglas que actúan en forma de filtros para establecer cómo se deberían manejar las conexiones bajo los protocolos `IPv4` e `IPv6`. Esta se basa en `netfilter`, aunque es más familiar para todas las distribuciones *iptables*. Sin embargo, en los sistemas *RHEL/CentOS* se ha sustituído su uso a favor de `firewalld`. Y en distribuciones *Debian/Ubuntu* podremos encontrar el uso de `ufw` como capa más amigable para el uso de los `iptables`. Y cómo veremos más adelante en estas notas tenemos también los `nftables`.
+
+Los `iptables` consisten en cuatro tablas de reglas:
+
+* **Filter table:** La tabla de filtros para la protección del servidor y los clientes.
+* **NAT table:** La tabla de translación de direcciones de red (*Network Address Translation*). Es usada para las conexiones públicas a las privadas.
+* **Mangle table:** La tabla de desapariciones usada para alterterar los paquetes de red enviados a través del firewall.
+* **Security table:** Usada por los sistemas que tienen *SELinux* instalado.
+
+La tabla principal es `Filter table` y en la que nos centraremos. Esta contiene las reglas de protección básica para clientes al servidor. Cada filtro consiste en tres cadenas de reglas principales y la tabla contiene las cadenas de ENTRADA (`INPUT`), AVANCE (`FORWARD`) y SALIDA (`OUTPUT`).
+
+Comencemos por explorar los `iptables` y el `ufw` para sistemas *Debian/Ubuntu* y su configuración actual.
+
+[UBUNTU]
+
+> Inspeccionar la configuración actual de `iptables`
+
+    [ubuntu]$ sudo iptables -L
+
+    Chain INPUT (policy ACCEPT)
+    target     prot opt source               destination
+
+    Chain FORWARD (policy ACCEPT)
+    target     prot opt source               destination
+
+    Chain OUTPUT (policy ACCEPT)
+    target     prot opt source               destination
+
+    # Para el protocolo IPv6 usamos `ip6tables`
+
+    [ubuntu]$ sudo ip6tables -L
+
+    <<SALIDA SIMILAR A LA ANTERIOR>>
+
+
+Como podemos observar, el `iptables` nos muestra los filtros para las cadenas `INPUT`, `FORWARD` y `OUTPUT`. Actualmente no hay reglas y sólo se muestran las cabeceras de la tabla (las columnas) `target`, `prot`, `opt`, `source` y `destination`.
+
+Podemos crear reglas usando el comando `iptables`. Por ejemplo, para permitir el paso de paquetes entrantes al servidor de servidores a los que les solicitemos una conexión.
+
+    iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+    # -A INPUT  >> Agrega la regla al final de la cadena INPUT (podemos usar -I para insertar la regla al principio).
+    # -m        >> LLama al módulo `conntrack` para rastrear los estados de conexión.
+    # --ctstate >> Determina el estado de la connexión (`connection state`). Este determina que se establezca y se de respuesta de la conexión.
+    # -j        >> Es la regla de salto al objetivo específico, en este caso ACCEPT. Esta regla aceptará los paquetes devueltos.
+
+La regla anterior agregaría a la cadena INPUT la información suficiente para aceptar paquetes de servidores con los que tengamos una conexión establecida, aceptando así los paquetes que envíe. Si consultamos nuevamente las reglas tendríamos algo similar a lo siguiente.
+
+> Inspeccionar la configuración actual de `iptables`
+
+    [ubuntu]$ sudo iptables -L
+
+    Chain INPUT (policy ACCEPT)
+    target     prot opt source               destination
+    ACCEPT     all  --  anywhere             anywhere             ctstate RELATED,ESTABLISHED
+
+    Chain FORWARD (policy ACCEPT)
+    target     prot opt source               destination
+
+    Chain OUTPUT (policy ACCEPT)
+    target     prot opt source               destination
+
+Ahora veremos una nueva regla con objetivo `ACCEPT` (aceptación), protocolo `all` 
+(todos), sin opciones, con origen `anywhere` (cualquiera)m con destino `anywhere` (cualquiera) y adicionales `ctstate RELATED`.
+
+Creemos una nueva regla para permitir las conexiones de `ssh` por el protocolo `tcp`.
+
+    iptables -A INPUT -p tcp --dport ssh -j ACCEPT
+
+    # -A INPUT  >> Agrega la regla al final de la cadena INPUT (podemos usar -I para insertar la regla al principio).
+    # -p tcp    >> Indica el protocolo afectado por la regla (TCP).
+    # --dport ssh >> Indica el puerto nombrado afectado por la regla (se puede usar el puerto 22 en lugar de `ssh`).
+    # -j ACCEPT   >> Acepta las conexiones a otras máquinas.
+
+Ahora la nueva regla permitirá todas las conexiones SSH a nuestro servidor. Si queremos rechazar los paquetes restantes, podemos colocar una regla de ENTRADA adicional al final de todas las reglas, para descartar las demás conexiones que no estén en ninguna regla anterior.
+
+    iptables -A INPUT -j DROP
+
+    # -A INPUT  >> Agrega la regla al final de la cadena INPUT (podemos usar -I para insertar la regla al principio).
+    # -j DROP   >> Descarta todos los paquetes (bloquea todas las conexiones no contempladas en las reglas anteriores).
+
+Finalmente, nuestro `iptables` debería lucir cómo se muesta a continuación.
+
+> Inspeccionar la configuración actual de `iptables`
+
+    [ubuntu]$ sudo iptables -L --line-number
+    
+    Chain INPUT (policy ACCEPT)
+    num  target     prot opt source               destination
+    1    ACCEPT     all  --  anywhere             anywhere             ctstate RELATED,ESTABLISHED
+    2    ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:ssh
+    3    DROP       all  --  anywhere             anywhere
+
+    Chain FORWARD (policy ACCEPT)
+    num  target     prot opt source               destination
+
+    Chain OUTPUT (policy ACCEPT)
+    num  target     prot opt source               destination
+
+    # Nota: Observa el parámetro adicional `--line-number`.
+
+Finalmente, si colocamos estas tres reglas, deberíamos permitir el [network loopback](https://es.wikipedia.org/wiki/Loopback) o la interfaz de red virtual (`127.0.0.1/8`). Para activar el tráfico sobre el host virtual agregaremos cómo primer regla de ENTRADA un `-j ACCEPT` como se muestra.
+
+    iptables -I INPUT 1 -i lo -j ACCEPT
+
+    # -I INPUT 1 >> Inserta en la posición 1 de INPUT.
+    # -i lo      >> El loopback para el tráfico del host virtual.
+    # -j ACCEPT  >> Acepta el tráfico.
+
+Ahora comparemos las diferencias, observa quién es la primer regla, observa también el cambio de parámetros para enfocarnos en INPUT en modo `verbose` (descriptivo).
+
+    [ubuntu]$ sudo iptables -L INPUT -v --line-number
+
+    Chain INPUT (policy ACCEPT 0 packets, 0 bytes)
+    num   pkts bytes target     prot opt in     out     source               destination
+    1        0     0 ACCEPT     all  --  lo     any     anywhere             anywhere
+    2      400 25360 ACCEPT     all  --  any    any     anywhere             anywhere             ctstate RELATED,ESTABLISHED
+    3        0     0 ACCEPT     tcp  --  any    any     anywhere             anywhere             tcp dpt:ssh
+    4        0     0 DROP       all  --  any    any     anywhere             anywhere
+
+Para la primer regla INPUT podemos observar que en la columna `in` en lugar de `any` tenemos `lo`.
+
+Lamentablemente el `iptables` no es permanente y al reiniciar el servidor se perderán todas las reglas, por lo que podemos instalar `iptables-persistent` con el fin de crear archivos de reglas persistentes.
+
+> Instalar `iptables-persistent`
+
+    [ubuntu]$ sudo apt install iptables-persistent
+
+Durante la instalación se nos preguntará si deseamos guardar las reglas actuales.
+
+![Instalación de iptables-persistent](../assets/s1.4.png)
+
+Una vez instalado se crearán los archivos `/etc/iptables/rules.v4` y `/etc/iptables/rules.v6`, los cuales contendrán las reglas en un formato más cómodo. Podemos inspeccionar cómo quedaron las reglas guardadas.
+
+> Inspeccionar el archivo de reglas persistentes para IPv4 de `iptables` en `/etc/iptables/rules.v4`
+
+    [ubuntu]$ cat /etc/iptables/rules.v4
+
+    # Generated by iptables-save v1.8.4 on Thu Feb 24 18:38:53 2022
+    *filter
+    :INPUT ACCEPT [0:0]
+    :FORWARD ACCEPT [0:0]
+    :OUTPUT ACCEPT [234:25204]
+    -A INPUT -i lo -j ACCEPT
+    -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+    -A INPUT -p tcp -m tcp --dport 22 -j ACCEPT
+    -A INPUT -j DROP
+    COMMIT
+    # Completed on Thu Feb 24 18:38:53 2022
+
+Alternativamente podemos usar el comando `ufw` (`Uncomplicated Firewall`), para administrar más comodamente las reglas de `iptables`.
+
+> Activar `ufw`
+
+    [ubuntu]$ sudo ufw enable
+
+    >>> Command may disrupt existing ssh connections. Proceed with operation (y|n)? y
+    >>> Firewall is active and enabled on system startup
+
+> Ver el estatus de `ufw`
+
+    [ubuntu]$ sudo ufw status
+
+    >>> Status: active
+
+> Agregar la regla para activar `ssh` (puerto `22`) en `tcp`
+
+    [ubuntu]$ sudo ufw allow 22/tcp
+
+    >>> Rule added
+    >>> Rule added (v6)
+
+> Ver el estatus de `ufw`
+
+    [ubuntu]$ sudo ufw status
+
+    Status: active
+
+    To                         Action      From
+    --                         ------      ----
+    22/tcp                     ALLOW       Anywhere
+    22/tcp (v6)                ALLOW       Anywhere (v6)
+
+> Consultar el `iptables` para `ufw-user-input`
+
+    [ubuntu]$ sudo iptables -L ufw-user-input
+
+    Chain ufw-user-input (1 references)
+    target     prot opt source               destination
+    ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:ssh
+
+> Activar el puerto 80
+
+    [ubuntu]$ sudo ufw allow 80
+
+    # Inspeccionamos el efecto en `iptables`
+
+    [ubuntu]$ sudo iptables -L ufw-user-input
+
+    Chain ufw-user-input (1 references)
+    target     prot opt source               destination
+    ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:ssh
+    ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:http
+    ACCEPT     udp  --  anywhere             anywhere             udp dpt:80
+
+Para que los cambios tengan efecto, debemos recargar a `ufw`.
+
+> Recargar `ufw`
+
+    [ubuntu]$ sudo ufw reload
+
+    >>> Firewall reloaded
+
+Hasta ahora hemos revisado `iptables` y `ufw` en el sistema *Debian/Ubuntu*. Sin embargo, es de nuestro interés revisar también `firewalld` para sistemas *RHEL/CentOS*, ya que es el reemplazo realizado para `iptables`.
+
+---
+
+En *RHEL/CentOS* se ha reemplazado el uso de `iptables` por `firewalld`, que es una alternativa más empresarial respecto a `iptables`. Sin embargo, estas dos no son compatibles y no podríamos tener a ambas funcionando al mismo tiempo, cómo sucede con `ufw`.
+
+> Verificar el estado de `firewalld` vía `firewalld-cmd --state`
+
+    [rhel]# firewall-cmd --state
+    
+    >>> running
+
+> Verificar el estado de `firewalld` vía `systemctl status firewalld`
+
+    [rhel]# systemctl status firewalld
+
+    ● firewalld.service - firewalld - dynamic firewall daemon
+    Loaded: loaded (/usr/lib/systemd/system/firewalld.service; enabled; vendor preset: enabled)
+    Active: active (running) since Wed 2022-02-23 23:54:36 EST; 7h ago
+        Docs: man:firewalld(1)
+    Main PID: 775 (firewalld)
+        Tasks: 2 (limit: 23624)
+    Memory: 33.9M
+    CGroup: /system.slice/firewalld.service
+            └─775 /usr/libexec/platform-python -s /usr/sbin/firewalld --nofork --nopid
+
+    feb 23 23:54:32 localhost.localdomain systemd[1]: Starting firewalld - dynamic firewall daemon...
+    feb 23 23:54:36 localhost.localdomain systemd[1]: Started firewalld - dynamic firewall daemon.
+    feb 23 23:54:38 localhost.localdomain firewalld[775]: WARNING: AllowZoneDrifting is enabled.
+
+
+
+### Zonas y servicios
+
+
+
+### Introducción a nftables
+
+
+[REFERENCIAS]
+
+* [https://linux.die.net/man/8/iptables](https://linux.die.net/man/8/iptables)
+* [https://www.booleanworld.com/depth-guide-iptables-linux-firewall/](https://www.booleanworld.com/depth-guide-iptables-linux-firewall/)
+* [https://www.digitalocean.com/community/tutorials/how-to-implement-a-basic-firewall-template-with-iptables-on-ubuntu-14-04](https://www.digitalocean.com/community/tutorials/how-to-implement-a-basic-firewall-template-with-iptables-on-ubuntu-14-04)
 
 ---
 
