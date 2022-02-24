@@ -362,11 +362,10 @@ Durante la configuración de la instancia podremos crear un archivo de claves `.
 
     [host]$ ssh -i "<path>/<file>.pem" <user>@<ip>
 
-    # Dónde:
-    #   <path> - Ruta hacía el archivo .pem
-    #   <file> - Nombre del archivo .pem
-    #   <user> - Nombre del usuario por defecto
-    #   <ip>   - IP, Host o DNS de la instancia
+    # <path> - Ruta hacía el archivo .pem
+    # <file> - Nombre del archivo .pem
+    # <user> - Nombre del usuario por defecto
+    # <ip>   - IP, Host o DNS de la instancia
 
 En la siguiente imagen se observa la conexión vía SSH desde [MobaXterm](https://mobaxterm.mobatek.net).
 
@@ -383,18 +382,263 @@ En la siguiente imagen se observa la conexión vía SSH desde [MobaXterm](https:
 
 ### Usuarios administrativos
 
+Por defecto algunas distribuciones como *RHEL* o *CentOS* dejan activo un usuario `root` único del sistema, con la contraseña establecida en la instalación.
 
+Usar el usuario `root` es peligroso y crea vulnerabilidades, por lo que su acceso debe ser deshabilitado lo antes posible. Sin embargo, antes debemos crear usuarios administrativos para no romper el acceso administrativo al sistema.
+
+En *RHEL/CentOS* tenemos un grupo de usuarios administrativos por defecto llamado `wheel`, en *Debian/Ubuntu* tenemos el grupo llamado `sudo`.
+
+Los usuarios que estén dentro del grupo administrativo serán administradores del sistema y podrán ejecutar comandos basados en las políticas de seguridad establecidas.
+
+El primer archivo que debe ser familiar para cualquier administrador es `/etc/sudoers` administrado a través del comando `visudo`.
+
+* **Nota:** No se debe modificar el archivo `/etc/sudoers` manualmente, ya que podría ocasionar errores graves.
+
+> Abrir el archivo de políticas de seguridad con `visudo`
+
+    [linux]# visudo
+
+    [linux]$ sudo visudo
+
+    --- SALIDA [CENTOS] ---
+
+    ...
+    ## Allow root to run any commands anywhere
+    root    ALL=(ALL)       ALL
+
+    ## Allows members of the 'sys' group to run networking, software,
+    ## service management apps and more.
+    # %sys ALL = NETWORKING, SOFTWARE, SERVICES, STORAGE, DELEGATING, PROCESSES, LOCATE, DRIVERS
+
+    ## Allows people in group wheel to run all commands
+    %wheel  ALL=(ALL)       ALL
+    ...
+
+    --- SALIDA [UBUNTU] ---
+
+    ...
+    # User privilege specification
+    root    ALL=(ALL:ALL) ALL
+
+    # Members of the admin group may gain root privileges
+    %admin ALL=(ALL) ALL
+
+    # Allow members of group sudo to execute any command
+    %sudo   ALL=(ALL:ALL) ALL
+    ...
+
+En este archivo podremos establecer las políticas de seguridad para grupos y usuarios, cómo se verá más adelante en estas notas.
 
 ### El grupo predefinido admin
 
+En *RHEL/CentOS* el grupo de administradores por defecto es llamado `wheel`, mientras que en *Debian/Ubuntu* es llamado `sudo`. Sin embargo, en ambas distribuciones en modo `su` (usuario `root`), podemos observar sólo el grupo `root`.
 
+> Ver los grupos del usuario con `groups`
+
+    [linux]# groups
+
+    --- SALIDA--
+
+    root
+
+    [linux]$ groups
+
+    --- SALIDA [CENTOS] ---
+
+    demo wheel
+
+    --- SALIDA [UBUNTU] ---
+
+    demo sudo
+
+Podemos agregar nuevos usuarios mediante `useradd`, especificando opcionalmente su grupo, su carpeta *HOME* y la terminal usada. Si el grupo no existe previamente, este será creado automáticamente, si no se especifica su nombre será igual que el nombre del usuario. Si la carpeta *HOME* no se establece, este usuario no tendrá carpeta principal. Y si la terminal no se estable se usará la terminal `/bin/sh`.
+
+> Agregar un usuario nuevo con `useradd [options] <user>`
+
+    [linux]# useradd demo
+
+    # Con grupo explícito
+
+    [linux]# useradd -G demo demo
+
+    # Con carpeta HOME y terminal bash
+
+    [linux]# useradd -m -d /home/demo -s /bin/bash demo
+
+    # Con grupo administrador, carpeta HOME y terminal bash
+
+    [linux]# useradd -G sudo -m -d /home/demo -s /bin/bash demo
+
+Una vez creado el usuario, podemos reemplazar el grupo al que pertenece el usuario o agregar nuevos grupos para el usuario.
+
+> Actualizar el grupo del usuario con `usermod [options] <user>`
+
+    # Cambiar el grupo del usuario `demo` a `admin`
+
+    [linux]# usermod -G admin demo
+
+    # Agregar el grupo `test` al usuario `demo` sin quitar los previos
+
+    [linux]# usermod -a -G admin demo
+
+    # Establecer la carpeta principal del usuario `demo` y su terminal
+
+    [linux]# usermod -m -d /home/demo -s /bin/bash demo
+
+Observa que el uso de `usermod` es similar a `useradd`, sin embargo, este sólo modificará al usuario. Esto es útil cuándo volvemos a llamar `useradd` con otros parámetros podría indicarnos que el usuario ya existe y no realizará los cambios.
+
+También podemos borrar al usuario mediante `userdel`.
+
+> Borrar un usuario con `userdel [options] <user>`
+    
+    [linux]# userdel demo
+
+    # Borrar también su directio HOME (CUIDADO)
+
+    [linux]# userdel -r demo
+
+Para revisar la lista de los usuarios podemos revisar el archivo `/etc/passwd`.
+
+> Ver los usuarios en `/etc/passwd`
+
+    [linux]# cat /etc/passwd
+
+    --- SALIDA ---
+    ubuntu:x:1000:1000:Ubuntu Admin:/home/ubuntu:/bin/bash
+    ...
+    demo:x:1001:1001::/home/demo:/bin/bash
+    ...
+
+    # Filtrar el usuario objetivo
+
+    [linux]# cat /etc/passwd | grep demo
+
+    >>> demo:x:1001:1001::/home/demo:/bin/bash
+
+El resultado será una cadena compuesta como sigue:
+
+    <user>:<encrypt>:<uid>:<gid>:<fullname>:<home>:<shell>
+
+    # <user>     - El nombre del usuario
+    # <encrypt>  - Tipo de encriptación (x - contraseña en `/etc/shadow`)
+    # <uid>      - El ID del usuario (UID)
+    # <gid>      - El ID del grupo (GID)
+    # <fullname> - El nombre completo (GECOS)
+    # <home>     - La ruta de la carpeta principal (HOME)
+    # <shell>    - La ruta a la terminal principal (SHELL)
+
+Una vez creado el usuario, podemos establecer una contraseña mediante `passwd`. El usuario `root` siempre podrá cambiar la contraseña de cualquier usuario.
+
+> Establecer la contraseña para un usuario con `passwd <user>`
+
+    [linux]# passwd demo
+
+Una vez que el usuario tenga una contraseña, podremos iniciar sesión con él mediante `su - <user>`.
+
+> Iniciar sesión con otro usuario
+
+    # Consultar el usuario actual
+
+    [linux]$ whoami
+
+    >>> ubuntu
+
+    # Iniciar sesión con el usuario `demo`
+
+    [linux]$ su - demo
+    Password:
+
+    # Consultar el usuario actual
+
+    [linux]$ whoami
+
+    >>> demo
+
+    # Terminar la sesión del usuario actual
+
+    [linux]$ exit
+
+    # Consultar el usuario actual
+
+    [linux]$ whoami
+
+    >>> ubuntu
+
+También podemos deshabilitar el uso de la contraseña de un usuario, para impedirle el inicio de sesión. Esto lo veremos más a detalle en estas mismas notas.
+
+> Habilitar/Deshabilitar la contraseña de un usuario
+
+    # Deshabilitar el uso de contraseña para el usuario `demo`
+
+    [linux]# passwd -l demo
+
+    # Habilitar el uso de contraseña para el usuario `demo`
+
+    [linux]# passwd -u demo
+
+* **Nota:** En *RHEL/CentOS* es común que cuándo los usuarios administradores queden establecidos, se deshabilite el uso de contraseña para el usuario `root`. En *Debian/Ubuntu* el usuario `root` suele estar ya deshabilitado para su inicio de sesión, sin embargo, podemos acceder a él mediante `sudo su`.
 
 ### El archivo de políticas sudo
 
+Mediante `visudo` podemos acceder al archivo de políticas de seguridad, el cuál establecerá cuáles son las políticas a seguir para grupos y usuarios. Podemos, por ejemplo, establecer que cómandos serán capaces de ejecutar qué grupos, qué usuarios o qué conjuntos de usuarios específicos (conjuntos de usuarios de distintos grupos quizás).
 
+El archivo `/etc/sudoers` contendrá las políticas de seguridad para los usuarios administradores. Este debe ser editado a través de `visudo` para evitar un mal manejo del archivo.
+
+Dentro de este archivo podemos establecer conjuntos de usuarios (`User_Alias`) u otorgar permisos individuales a usuarios. Sin embargo, es recomendable trabajar los permisos sobre los *grupos de usuarios* o los *conjuntos de usuarios*.
+
+> Crear un Conjunto de Usuarios con `User_Alias`
+
+    [linux]# visudo
+
+    ---
+    # Conjunto de usuarios ADMINS
+    User_Alias ADMINS = john, ana
+
+    # Políticas sobre el conjunto de usuarios
+    ADMINS ALL=(ALL) ALL
+
+    # Políticas sobre un usuario específico (no recomendado)
+    pedro ALL=(ALL) ALL
+    ---
 
 ### Usuarios sudo limitados
 
+Muchas veces necesitaremos otorgar privilegios específicos a usuarios, conjuntos de usuarios o grupos.
+
+Por ejemplo, para un servidor, podríamos planear políticas de seguridad para usuarios administradores de paquetes, administradores de servicios o administradores específicos sobre comandos personalizados.
+
+Mediante el conjunto de comandos (`Cmnd_Alias`) podemos establecer el alcance de los comandos `sudo` que podrán ejecutar los usuarios.
+
+> Establecer un conjunto de comandos con `Cmnd_Alias`
+
+    [linux]# visudo
+
+    ---
+    # Conjunto de comandos
+    Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/yum
+
+    # Conjunto de usuarios
+    User_Alias SOFTWAREADMINS = susy, sara
+
+    # Políticas sobre el conjunto de usuarios
+    SOFTWAREADMINS ALL=(ALL) SOFTWARE
+    ---
+
+* **Nota:** Los grupos se diferencian de los usuarios mediante el `%` como prefijo, por ejemplo, `%demo` significa el grupo de usuarios `demo`. Recordando que este grupo se ajustó al usuario mediante `useradd -G demo` o `usermod -a demo`. El prefijo `+` será para grupos de red, el prefijo `!` será usado para excluir usuarios dentro del grupo o conjunto (ejemplo un nuevo conjunto de administradores sin ciertos usuarios `User_Alias SOFTWAREDMINS = ADMINS, !pepe, !paco`). Finalmente el prefijo `#` marca un `UID` dentro de `Runas_Alias` (ejemplo `Runas_Alias ROOT = #0`).
+
+> Sintaxis de la Política de Seguridad
+
+    <user> <host>=(<account>) [<tag>] <command>
+
+    # <user>    - El usuario o conjunto de usuarios/grupos
+    # <host>    - El servidor o conjunto de servidores/direcciones
+    # <account> - El usuario o conjuto de usuarios que ejecutarán los comandos
+    # <tag>     - La etiqueta opcional si requiere o no contraseña (`PASSWD` o `NOPASSWD`)
+    # <command> - El comando o conjunto de comandos que serán ejecutados
+
+[REFERENCIAS]
+
+* [https://help.ubuntu.com/community/Sudoers](https://help.ubuntu.com/community/Sudoers)
 
 
 ### Prevención de ataques de fuerza bruta en contraseñas
