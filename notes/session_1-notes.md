@@ -1,4 +1,4 @@
-# Sesión 1 - Seguridad y Usuarios
+# Sesión 1 - Seguridad, Usuarios y Firewall
 
 ## Agenda
 
