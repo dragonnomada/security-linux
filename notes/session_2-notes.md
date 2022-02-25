@@ -548,7 +548,100 @@ Una vez desmontada los archivos generados quedarán encriptados y su lectura ser
 
 ### Encriptación de Volúmenes
 
+`VeraCrypt` es una gran alternativa a las particiones `LUKS` y al cifrado de directorios `eCrypt`. Esta nos permitirá crear volúmenes cifrados compatibles con otros sistemas operativos. Su funcionamiento es bastante sencillo y cómodo y hay alternativas GUI para su uso.
 
+La consola de `veracrypt` nos permitirá crear los volúmenes e interacturar con ellos. Podemos instalarlo desde [https://www.veracrypt.fr/en/Downloads.html](https://www.veracrypt.fr/en/Downloads.html).
+
+> Instalar VeraCrypt
+
+    # Descargar el paquete de VeraCrypt
+
+    [linux]$ wget https://launchpad.net/veracrypt/trunk/1.25.9/+download/veracrypt-1.25.9-setup.tar.bz2
+
+    # Descomprimir el paquete
+
+    [linux]$ tar xvf veracrypt-1.25.9-setup.tar.bz2
+
+    # Ejecutar el instalador de consola x64
+
+    [linux]$ ./veracrypt-1.25.9-setup-console-x64
+
+Ahora ya podemos crear volúmenes y usarlos.
+
+> Crear un nuevo volumen con `veracrypt -c`
+
+    [linux]$ veracrypt -c
+
+    Volume type:
+        1) Normal
+        2) Hidden
+    Select [1]:
+
+    Enter volume path: <</volumes/data.hc>>
+
+    Enter volume size (sizeK/size[M]/sizeG.sizeT/max): <<1G>>
+
+    Encryption Algorithm:
+        1) AES
+        2) Serpent
+        3) Twofish
+        4) Camellia
+        5) Kuznyechik
+        6) AES(Twofish)
+        7) AES(Twofish(Serpent))
+        8) Camellia(Kuznyechik)
+        9) Camellia(Serpent)
+        10) Kuznyechik(AES)
+        11) Kuznyechik(Serpent(Camellia))
+        12) Kuznyechik(Twofish)
+        13) Serpent(AES)
+        14) Serpent(Twofish(AES))
+        15) Twofish(Serpent)
+    Select [1]:
+
+    Hash algorithm:
+        1) SHA-512
+        2) Whirlpool
+        3) SHA-256
+        4) Streebog
+    Select [1]:
+
+    Filesystem:
+        1) None
+        2) FAT
+        3) Linux Ext2
+        4) Linux Ext3
+        5) Linux Ext4
+        6) NTFS
+        7) exFAT
+        8) Btrfs
+    Select [2]: <<5>>
+
+    Enter password: <<****>>
+    Re-enter password: <<****>>
+
+    Enter PIM: <<8891>>
+
+    Enter keyfile path [none]:
+
+    Please type at least 320 randomly chosen characters and then press Enter:
+    <<...>>
+
+    Done: 100.000%  Speed:  18 MiB/s  Left: 0 s
+
+    The VeraCrypt volume has been successfully created.
+
+Después de crear el volumen seremos capaces de utilizarlo fácilmente mediante `veracrypt <volume> <destination>`, donde `<volume>` es la ruta a nuestro volumen y `<destination>` será el lugar donde se monte.
+
+> Montar un volumen con `veracrypt <volume> <destination>`
+
+    [linux]$ veracrypt /volumes/data.hc /volumes/data
+
+Ahora ya podemos usar el volumen a través de `/volumes/data`. En modo administrador podremos cambiar los permisos para poder utilizarlo libremente.
+
+> Desmontar un volumen con `veracrypt -d <volume>`
+
+    [linux]$ -d veracrypt /volumes/data.hc
 
 ### Aseguramiento de SSH (sustitución de contraseñas por archivos de claves)
 
@@ -558,6 +651,7 @@ Una vez desmontada los archivos generados quedarán encriptados y su lectura ser
 
 * [https://man7.org/linux/man-pages/man5/crypttab.5.html](https://man7.org/linux/man-pages/man5/crypttab.5.html)
 * [https://devconnected.com/how-to-create-disk-partitions-on-linux/](https://devconnected.com/how-to-create-disk-partitions-on-linux/)
+* [https://www.veracrypt.fr/en/Command%20Line%20Usage.html](https://www.veracrypt.fr/en/Command%20Line%20Usage.html)
 
 ## Control de Acceso a Archivos y Directorios
 
