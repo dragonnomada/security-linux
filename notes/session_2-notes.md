@@ -645,24 +645,336 @@ Ahora ya podemos usar el volumen a través de `/volumes/data`. En modo administr
 
 ### Aseguramiento de SSH (sustitución de contraseñas por archivos de claves)
 
-    TODO
+En los sistemas empresariales es muy común sustituir el uso de contraseñas por llaves públicas, con el fin de asegurar sus sistemas en un medio más físico. La desventaja de usar contraseñas, es que son más fáciles de compartir entre usuarios, dando como resultado un acceso más inmediato y vulnerable. Piense en una empresa con miles de programadores, y la posibilidad de que alguno comparta su contraseña con algún colega o extraño. Por otro lado, poseer claves públicas como medio de acceso al sistema, es una buena práctica laboral, ya que estas pueden ser configuradas en equipos dedicados a los empleados y no ser compartidas fácilmente. Si un empleado quisiera compartir la clave, tendría que enviarla por algún medio, como correo o algún dispositivo de almacenamiento, dejando rastro físico de dicho evento.
+
+Más allá de eso, una gran ventaja de utilizar llaves públicas como método de acceso, es poder automatizar el acceso a los sistemas. Imagina escenarios donde periodicamente se renuevan las credenciales de acceso al sistema y los empleados descargan las nuevas claves o estas se descargan automáticamente en sus equipos. Estos mecanismos generan un flujo de trabajo llamado `Passwordless` (libre de contraseñas). Dónde los usuarios no tienen que memorizar contraseñas y poner en riesgo al sistema por la construcción de contraseñas débiles que pueden ser inferidas por atacantes.
+
+Las llaves públicas son generadas en pareja de forma asimétrica por algoritmos de encriptación. Su contra parte es una llave privada que nunca es compartida y la reserva el sistema, para validar a la llave pública. Es decir, en los algoritmos de encriptación, podemos encontrar algoritmos simétricos (de una sola clave) o algoritmos asimétricos (de parejas de claves). Los algoritmos de encriptación asimétricos nos permitirán entonces administrar parejas de llaves, de las cuáles una podrá ser compartidad de forma segura y la otra quedará protegida en el sistema. Así la llave compartida o la *llave pública* (o clave pública), puede ser entregada como medio de acceso a los usuarios y tendrán una equivalencia a una contraseña. Sólo que en este caso, será una cadena larga de caracteres (o bytes), los cuales harán difícil que los usuarios siquiera se tomen el tiempo de memorizarlas o ver su contenido, pero mejor aún, se basan en algoritmos de cifrado robustos que tomarían bastante tiempo en ser decifrado, incluso milenios (con la computación moderna y actual).
+
+---
+
+Vamos a comenzar por generar una pareja de claves mediante `ssh-keygen -t <alg>`, donde `<alg>` será el algoritmo de encriptación deseado (generalmente `rsa`). Este generador nos preguntará por el nombre de nuestras claves (por defecto `~/.ssh/id_rsa`). La clave privada será protegida por una contraseña que será preguntada.
+
+> Generar una pareja de claves con `ssh-keygen -t <alg>`
+
+    [linux]$ ssh-keygen -t rsa
+
+    Generating public/private rsa key pair.
+    Enter file in which to save the key (/home/ubuntu/.ssh/id_rsa): <<>>
+    Enter passphrase (empty for no passphrase): <<****>>
+    Enter same passphrase again: <<****>>
+    Your identification has been saved in /home/ubuntu/.ssh/id_rsa
+    Your public key has been saved in /home/ubuntu/.ssh/id_rsa.pub
+    The key fingerprint is:
+    SHA256:peRWcP310j2uLDGGbEGYNNcACBatigbcX0/CybK97yA ubuntu@ubuntu-server
+    The key's randomart image is:
+    +---[RSA 3072]----+
+    |   ++ o+=o+.     |
+    |  .  o oo+ ..   .|
+    |. . . o + o  . oo|
+    |.. o . O *    o.+|
+    |o . . = S o   ...|
+    |.o   o o = +   . |
+    |.    E .o . + .  |
+    |      ...  . o   |
+    |        oo  .    |
+    +----[SHA256]-----+
+
+Esto nos genera dos claves, la clave privada llamada `id_rsa` (o el nombre especificado) y la clave pública `id_rsa.pub` (o el nombre especificado más la extensión `.pub`). Si inspeccionamos las claves, estas deberían contener un conjunto de caracteres y algunas cabeceras indicativas.
+
+> Inspeccionar las claves
+
+    [linux]$ cat ~/.ssh/id_rsa
+
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    b3BlbnNzaC1rZXktdjEAAAAACmFlczI1Ni1jdHIAAAAGYmNyeXB0AAAAGAAAABBpDZo+26
+    ... (bastantes más caracteres)
+    qmeK89M6y0NR0y/S5pLtOT0YD3yUlkPXWaQELXZm17kYMxuksjWN8W0gqNOUPZPWvgyhm8
+    XNiOXxDWy4QmGW+g3+jzMfRE5ec=
+    -----END OPENSSH PRIVATE KEY-----
+
+    [linux]$ cat ~/.ssh/id_rsa.pub
+
+    ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQ...= ubuntu@ubuntu-server
+
+---
+
+Ahora ya podemos crear una comunicación segura entre máquinas. Veamos una tabla que resumirá lo necesario para trabajar.
+
+Máquina | Llave | Comentarios
+--- | --- | ---
+Cliente | Privada | El cliente genera una pareja de claves y posee la llave privada a su resguardo como contraseña de autenticación
+Servidor | Pública | El servidor agrega la clave pública del cliente en su registro de claves autorizada `.ssh/authorized_keys`
+
+Suponiendo que nuestro servidor *Debian/Ubuntu* o *RHEL/CentOS* es la máquina a la que queramos ingresar mediante las llaves públicas para no usar contraseñas desde nuestros equipos remotos (nuestra máquina local o de oficina). Entonces tendremos que considerar una serie de pasos.
+
+1. El usuario con el que deseamos ingresar debe estar registrado en el servidor.
+2. El usuario debería tener una carpeta HOME de usuario con su propia carpeta `.ssh` y el archivo `.ssh/authorized_keys` que contenga todas las llaves públicas permitidas para iniciar sesión con este usuario.
+3. El cliente remoto que se conectará con nuestro usuario del servidor deberá poseer el archivo de la llave privada que generó la llave pública agregada en nuestro servidor.
+4. Debemos habilitar la posibilidad de aceptar inicios de sesión con llaves públicas desde `/etc/ssh/sshd_config`.
+5. Opcionalmente podemos desactivar los inicios de sesión con contraseña.
+
+Si seguimos estos pasos, podremos configurar usuarios del servidor y proveerle a nuestros clientes la posibilidad de enviarnos sus llaves públicas para darles acceso con los usuarios registrados en el servidor.
+
+> 1. Crear un usuario nuevo
+
+    [server]$ sudo useradd -m -d /home/roboto -s /bin/bash roboto
+
+    [server]$ id roboto
+    
+    >>> uid=1003(roboto) gid=1003(roboto) groups=1003(roboto)
+
+> 2. Generar la carpeta `.ssh` y el archivo `authorized_keys` del usuario
+
+    [server]$ sudo mkdir -p ~roboto/.ssh
+
+    [server]$ sudo touch ~roboto/.ssh/authorized_keys
+
+> 3. Generar pares de llaves para cada cliente
+
+    [local]> ssh-keygen -t rsa -C "client-1 as roboto"
+
+    Generating public/private rsa key pair.
+    Enter file in which to save the key (C:\Users\lanz/.ssh/id_rsa): <<client-1>>
+    Enter passphrase (empty for no passphrase): <<****>>
+    Enter same passphrase again: <<****>>
+    Your identification has been saved in client-1.
+    Your public key has been saved in client-1.pub.
+    The key fingerprint is:
+    SHA256:UF8q8VvDV+0mYnauMkgm0WNu7c/7SntkZysB9ZkceGY client-1 as roboto
+    The key's randomart image is:
+    +---[RSA 3072]----+
+    |        o   . . o|
+    |       . + + o E.|
+    |      ... + = B.+|
+    |      ..+. ++oo=o|
+    |       +So.o.+ o |
+    |      . = .  .+ o|
+    |       = o  .+.o.|
+    |        . +o.o.. |
+    |           +*=o  |
+    +----[SHA256]-----+
+
+    [local]> more client-1.pub
+
+    >>> ssh-rsa AAAAB3.../U2Jefk= client-1 as roboto
+
+    # NOTA: Estas se pueden generar en una máquina local, no necesariamente sobre el servidor.
+
+    # Agregamos la clave a `~roboto/.ssh/authorized_keys`
+
+    [server]$ sudo nano ~roboto/.ssh/authorized_keys
+
+    --- 
+    ssh-rsa AAAAB3.../U2Jefk= client-1 as roboto
+    ---
+
+    # Alternativamente podemos copiar la identidad desde el cliente
+
+    [local]> ssh-copy-id -i roboto.pub roboto@<server>
+
+> 4. Activamos el inicio de sesión con llaves públicas
+
+    [server]$ sudo nano /etc/ssh/sshd_config
+
+    ---
+    #PubkeyAuthentication no
+    PubkeyAuthentication yes
+    ...
+    #AuthorizedKeysFile     .ssh/authorized_keys .ssh/authorized_keys2
+    AuthorizedKeysFile      .ssh/authorized_keys
+    ---
+
+> 5. [Opcional] Deshabilitamos la autenticación por contraseña
+
+    [server]$ sudo nano /etc/ssh/sshd_config
+
+    ---
+    ...
+    PasswordAuthentication no
+    ---
+
+Finalmente, los clientes podrán conectarse usando alguna interfaz o directamente desde sus terminales.
+
+> Conectar desde el cliente al servidor mediante la terminal
+
+    [local]> ssh -i client-1 roboto@<server>
+
+    Enter passphrase for key 'client-1': <<****>>
+
+    ...
+
+    [roboto@<server>]$ whoami
+
+    >>> roboto
+
+En la siguiente imagen podemos ver el resultado desde una terminal en Windows 10.
+
+![Client 1 conectado al server](../assets/s2.4.png)
+
+* **COMENTARIO:** Como último comentario, el cliente puede usar `ssh-copy-id -i <keyfile> <user>@<server>` para agregar automáticamente la llave pública en el servidor, sin la necesidad de registrarla manualmente, sin embargo, el cliente debería saber la contraseña del usuario (`<user>`), por lo cuál podría perder sentido práctico.
 
 [REFERENCIAS]
 
 * [https://man7.org/linux/man-pages/man5/crypttab.5.html](https://man7.org/linux/man-pages/man5/crypttab.5.html)
 * [https://devconnected.com/how-to-create-disk-partitions-on-linux/](https://devconnected.com/how-to-create-disk-partitions-on-linux/)
 * [https://www.veracrypt.fr/en/Command%20Line%20Usage.html](https://www.veracrypt.fr/en/Command%20Line%20Usage.html)
+* [https://kb.iu.edu/d/aews](https://kb.iu.edu/d/aews)
+* [https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server-es](https://www.digitalocean.com/community/tutorials/how-to-configure-ssh-key-based-authentication-on-a-linux-server-es)
 
 ## Control de Acceso a Archivos y Directorios
 
 ### Autoria de archivos y directorios con `chown`
 
-    TODO
+El comando `chown` nos permite definir la autoría de carpetas y archivos. Podemos establecer a quién le pertenecerán los recursos y que privilegios tendrán los demás usuarios.
+
+Existen tres niveles de acceso a los recursos (carpetas y archivos) que se listan en la siguiente tabla.
+
+Nivel | Descripción
+--- | ---
+*Usuario* |  Determina el acceso a nivel de un usuario específico.
+*Grupo* | Determina el acceso a nivel de usuarios del mismo grupo.
+*Otros* | Determina el acceso a nivel de otros usuarios que no están en el grupo.
+
+* **IMPORTANTE:** A estos tres niveles de acceso se les llama **`UGO`** (`ugo`).
+
+Al generar o reasignar la propiedad de pertenencia de los recursos (autoría / nivel de acceso), debemos considerar hacerlo en esos tres niveles como buena práctica (al menos que sólo se desee dar acceso a nivel grupo y otros).
+
+> Asignar la propiedad de un recurso a un usuario
+
+    SINTAXIS: chown <user> <resource>
+
+> Asignar la propiedad a un grupo
+
+    SINTAXIS: chown :<group> <resource>
+
+> Asignar la propiedad a un usuario y un grupo
+
+    SINTAXIS: chown <user>:<group> <resource>
+
+Es importante aclarar que el grupo (`<group>`) no necesariamente es el mismo que el del usuario. Por ejemplo, el usuario puede ser `ana` cuyo grupo es `rh`. Pero ella crea un reporte que debe estar disponible para el equipo de soporte, cuyo grupo es `soporte`. Entonces, podríamos asignar la autoría del recurso como `chown ana:soporte reporte.xlsx`, cuyo propietario es el usuario `ana` y el grupo `soporte`.
 
 ### Permisos de archivos y directorios con `chmod`
 
-    TODO
+Determinar la autoría de los recursos es esencial para administrar correctamente un sistema, sin problemas comunes como que algunos usuarios alteren o accedan a otros recursos protegidos por accidente o intensionadamente.
 
+Existen varias formas de establecer los permisos sobre los recursos, pero entendamos primero los tiempos de permisos que se pueden otorgar, resumidos en la siguiente tabla.
+
+Permiso | Símbolo | Modo | Descripción
+--- | --- | --- | ---
+*read* | `r` | `4` | Permite leer el recurso
+*write* | `w` | `2` | Permite escribir el recurso
+*execute* | `x` | `1` | Permite ejecutar/búscar el recurso
+
+Los permisos pueden ser combinados sobre un recurso, por ejemplo, `rw` significa el permiso de lectura y escritura, cuya suma de *modos* es `6` (`4 + 2`). En la siguiente tabla se muestran las combinaciones posibles.
+
+Modo | Permiso | Descripción
+--- | --- | ---
+`0` | `-` | Ningún permiso
+`1` | `x` | Ejecución
+`2` | `w` | Escritura
+`3` | `wx` | Escritura + Ejecución
+`4` | `r` | Lectura
+`5` | `rx` | Lectura + Ejecución
+`6` | `rw` | Lectura + Escritura
+`7` | `rwx` | Lecutra + Escritura + Ejecución (Todos)
+
+Es común ver permisos en símbolos o números, por ejemplo, `rx` o `5`. Generalmente cuándo listamos los detalles de una carpeta usando `ls -l` podremos ver en la primer columna los permisos con el formato `--- --- ---` que representa a tres ternas de permisos considerados los permisos **`ugo`**.
+
+---
+
+Al asignar permisos a un recurso tomaremos en cuenta los tres niveles de acceso de la propiedad del recurso (`ugo`) establecidos por `chown`.
+
+Para cada nivel determinaremos los permisos del recurso para cada nivel. En la siguiente tabla se muestran los tres niveles de acceso, con algunos modos de ejemplo.
+
+Nivel | Permiso | Descripción
+--- | --- | ---
+**u** | `rwx` | El usuario propietario del recurso tiene permiso de lectura escritura y ejecución
+**g** | `r` | El grupo propietario del recurso sólo tiene permiso de lectura
+**o** | `-` | Otros usuarios no tienen permisos de acceso
+**u** | `r` | El usuario propietario sólo es capaz de leer el recurso
+**g** | `w` | El grupo propietario sólo es capaz de escribir el recurso
+**o** | `x` | Otros usuarios son capaces de ejecutar el recurso
+**u** | `5` | El usuario propietario es capaz de leer y ejecutar el recurso
+**g** | `3` | El grupo propietario es capaz de escribir y ejecutar el recurso
+**o** | `0` | Otros usuarios no tienen ningún permiso sobre el recurso
+
+---
+
+Existen dos modos principales de establecer los permisos a un recurso mediante `chmod`, el primero se considera simbólico y el segundo numérico.
+
+> Establecer permisos en modo simbólico
+
+    # Modifica los permisos sólo para el usuario propietario
+
+    SINTAXIS: chmod u=<mode> <resource>
+
+    # Modifica los permisos para el usuario propietario y el grupo propietario
+
+    SINTAXIS: chmod u=<mode>,g=<mode> <resource>
+
+    # Modifica los permisos para los tres niveles de acceso `ugo`
+
+    SINTAXIS: chmod u=<mode>,g=<mode>,o=<mode> <resource>
+
+    # Establece los permisos para el usuario propietario y deja sin permisos al grupo y los otros
+
+    SINTAXIS: chmod u=<mode>,g=,o= <resource>
+    
+    # Agregar un permiso singular (no altera los otros)
+
+    SINTAXIS: chmod <symbol>+<mode> <resource>
+
+    # Quitar un permiso singular (no altera los otros)
+
+    SINTAXIS: chmod <symbol>-<mode> <resource>
+
+    # Ejemplo: Agrega lectura al recurso `<resource>` para el grupo propietarios
+    #   chmod g+w <resorce>
+
+Veamos un ejemplo en el que el recurso sea un reporte generado por el usuario Ana (`ana`) de Recursos Humanos (grupo `rh`). Y queremos establecer que Ana tenga acceso de lectura y escritura, el equipo de Soporte (grupo `soporte`) tenga los permisos de lectura y ejecución y los demás usuarios no tengan permisos, entonces podemos establecer los siguientes permisos sobre el reporte.
+
+> EJEMPLO: Permisos del reporte
+
+    [linux]# chmod u=rw,g=rx,o= reporte.xlsx
+
+    # Tabla de permisos
+    #   r w x
+    # u • • -
+    # g • - •
+    # o - - -
+
+Otra forma de asignar permisos es mediante el modo numérico, este se basará en la suma de los modos (`r=4, w=2, x=1`). A diferencia del modo simbólico, aquí nos veremos forzados a establecer el permiso para cada nivel de acceso (`ugo`).
+
+> Establecer permisos en modo numérico
+
+    # Modifica los permisos sólo para el usuario propietario
+
+    SINTAXIS: chmod <mode> <resource>
+
+    # Donde <mode> es la suma de los permisos
+    # r - 4
+    # w - 2
+    # x - 1
+
+    # Ejemplo: chmod 650 /data
+    #   * Indica que el usuario propietario de /data puede leer y escribir (4 + 2 = 6)
+    #   * Indica que el grupo propietario de /data puede leer y ejecutar (4 + 1 = 5)
+    #   * Indica que otros usuarios no tienen permisos (0)
+
+Veamos el mismo ejemplo del reporte como quedaría.
+
+> EJEMPLO: Permisos del reporte
+
+    [linux]# chmod u=rw,g=rx,o= reporte.xlsx
+
+    # Tabla de permisos
+    #   u g o 
+    # r 4 4 0
+    # w 2 0 0
+    # x 0 1 0
+    #   - - -
+    # = 6 5 0
 
 ## Listas de Control de Acceso
 
@@ -686,6 +998,10 @@ Ahora ya podemos usar el volumen a través de `/volumes/data`. En modo administr
 
     TODO
 
+[REFERENCIAS]
+
+* [https://linux.die.net/man/1/chown](https://linux.die.net/man/1/chown)
+* [https://linux.die.net/man/1/chmod](https://linux.die.net/man/1/chmod)
 
 ## Control de Acceso con SELinux
 
