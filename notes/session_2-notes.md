@@ -427,11 +427,128 @@ Una vez adentro podremos ver que nuestra partición fue montada correctamente en
 
 ### Encriptación de Directorios
 
-    TODO
+Para la encriptación de directorios podemos usar `eCryptfs`, la cual está disponible para *Debian/Ubuntu*, pero fue removida de *RHEL/CentOS* a partir de la versión `7`.
+
+El cifrado de directorios se dará a través del montaje de un directorio sobre su misma ruta, usando el sistema de archivos `ecryptfs`. Usaremos `mount -t ecryptfs <path> <path>` para conseguirlo. 
+
+Todos los archivos generados mientras la carpeta esté montada de forma cifrada podrán leerse y escribirse sin mayor problema. Sin embargo, si la carpeta se encuentra demostrada, los archivos estarán cifrados.
+
+Esto es muy útil cuándo compartimos volúmenes/particiones o directorios en los que necesitamos mantener todos los archivos de un directorio de forma cifrada. Por ejemplo, dentro de una empresa podría ser una carpeta con los códigos fuente o los reportes financieros.
+
+En *Debian/Ubuntu* instalaremos el paquete `ecryptfs-utils` para utilizarlo.
+
+[UBUNTU]
+
+    sudo apt install ecryptfs-utils
+
+Como en *RHEL/CentOS* no disponemos de `eCryptfs`, podemos intentar instalar manualmente los paquetes usando `dnf install <package>`, pero previamente descargaremos los RPM necesarios para que los reconozca `dnf` (`Dandified YUM`).
+
+* **Nota:** No hay garantías que funcione, pero puede intentarse.
+
+[CENTOS]
+
+    [rhel]# wget https://download-ib01.fedoraproject.org/pub/epel/8/Everything/x86_64/Packages/e/epel-release-8-14.el8.noarch.rpm
+
+    [rhel]# rpm -Uvh epel-release*rpm
+
+    [rhel]# dnf install pkcs11-helper
+
+    [rhel]# wget http://mirror.rackspace.com/elrepo/elrepo/el8/x86_64/RPMS/elrepo-release-8.2-1.el8.elrepo.noarch.rpm
+
+    [rhel]# rpm -Uvh elrepo-release*rpm
+
+    [rhel]# dnf install ecryptfs-utils
+
+Una vez asegurado `eCryptfs` en el sistema podemos montar directorios, pero antes deberemos configurar la frase de montado.
+
+> Generar una contraseña de montado de `eCrypt`
+
+    [ubuntu]$ ecryptfs-setup-private
+
+    Enter your login passphrase [ubuntu]: <<~~~~>>
+    Enter your mount passphrase [leave blank to generate one]: <<****>>
+    Enter your mount passphrase (again): <<****>>
+
+    ************************************************************************
+    YOU SHOULD RECORD YOUR MOUNT PASSPHRASE AND STORE IT IN A SAFE LOCATION.
+    ecryptfs-unwrap-passphrase ~/.ecryptfs/wrapped-passphrase
+    THIS WILL BE REQUIRED IF YOU NEED TO RECOVER YOUR DATA AT A LATER TIME.
+    ************************************************************************
+
+
+    Done configuring.
+
+    Testing mount/write/umount/read...
+    Inserted auth tok with sig [26270991e350d295] into the user session keyring
+    Inserted auth tok with sig [f9257081132b6f12] into the user session keyring
+    Inserted auth tok with sig [26270991e350d295] into the user session keyring
+    Inserted auth tok with sig [f9257081132b6f12] into the user session keyring
+    Testing succeeded.
+
+    Logout, and log back in to begin using your encrypted directory.
+
+* **Nota:** Podemos usar `ecryptfs-unwrap-passphrase ~/.ecryptfs/wrapped-passphrase` para recuperar nuestra frase montado.
+
+Ya podemos montar la carpeta mediante `mount -t ecryptfs <path> <path>`
+
+> Montar una carpeta en forma cifrada con `eCrypt`
+
+    [ubuntu]$ sudo mount -t ecryptfs /secret /secret
+
+    Passphrase: <<****>>
+    Select cipher:
+        1) aes: blocksize = 16; min keysize = 16; max keysize = 32
+        2) blowfish: blocksize = 8; min keysize = 16; max keysize = 56
+        3) des3_ede: blocksize = 8; min keysize = 24; max keysize = 24
+        4) twofish: blocksize = 16; min keysize = 16; max keysize = 32
+        5) cast6: blocksize = 16; min keysize = 16; max keysize = 32
+        6) cast5: blocksize = 8; min keysize = 5; max keysize = 16
+    Selection [aes]: <<>>
+    Select key bytes:
+        1) 16
+        2) 32
+        3) 24
+    Selection [16]: <<>>
+    Enable plaintext passthrough (y/n) [n]: <<>>
+    Enable filename encryption (y/n) [n]: <<y>>
+    Filename Encryption Key (FNEK) Signature [a48d5eecd5bd6b96]:
+    Attempting to mount with the following options:
+        ecryptfs_unlink_sigs
+        ecryptfs_fnek_sig=a48d5eecd5bd6b96
+        ecryptfs_key_bytes=16
+        ecryptfs_cipher=aes
+        ecryptfs_sig=a48d5eecd5bd6b96
+    WARNING: Based on the contents of [/root/.ecryptfs/sig-cache.txt],
+    it looks like you have never mounted with this key
+    before. This could mean that you have typed your
+    passphrase wrong.
+
+    Would you like to proceed with the mount (yes/no)? : <<yes>>
+    Would you like to append sig [a48d5eecd5bd6b96] to
+    [/root/.ecryptfs/sig-cache.txt]
+    in order to avoid this warning in the future (yes/no)? : <<yes>>
+    Successfully appended new sig to user sig cache file
+    Mounted eCryptfs
+
+    # Inspeccionar la ruta montada
+
+    [ubuntu]$ mount | grep secret
+
+    /secret on /secret type ecryptfs (rw,relatime,ecryptfs_fnek_sig=a48d5eecd5bd6b96,ecryptfs_sig=a48d5eecd5bd6b96,ecryptfs_cipher=aes,ecryptfs_key_bytes=16,ecryptfs_unlink_sigs)
+
+* **ADVERTENCIA:** No debes montar la carpeta mientras estás dentro de ella.
+
+Ahora todos los archivos que se creen dentro de la carpeta mientras este montada quedarán cifrados.
+
+> Desmontar la carpeta
+
+    [ubuntu]$ sudo umount /secret
+
+Una vez desmontada los archivos generados quedarán encriptados y su lectura será imposible.
 
 ### Encriptación de Volúmenes
 
-    TODO
+
 
 ### Aseguramiento de SSH (sustitución de contraseñas por archivos de claves)
 
