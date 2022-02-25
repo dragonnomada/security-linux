@@ -1235,6 +1235,175 @@ Ahora revisemos algunas operaciones comúnes para trabajar las zonas y los servi
 
 ### Introducción a nftables
 
+Las `nfttables` proveen un nuevo conjunto de utilidades para el firewall, cómo la posibilidad de crear árboles multidimensionales de reglas o definir múltiples acciones para una misma regla, y así poder administrar de una forma más versátil el firewall.
+
+Las `nftables` consideran a los `Tables` como una familia de protocolos, mientras que los `Chains` son equivalentes a los `iptables`. Estos están basados en *scripting* por lo que son más flexibles y semánticos.
+
+Veamos su instalación y usos principales.
+
+> Instalar `nftables`
+
+    [ubuntu]$ sudo apt install nftables
+
+> Listar las tablas
+
+    [ubuntu]$ sudo nft list tables
+
+    # Nota: En la nueva instalación no mostrará nada
+
+Los `nftables` cuentan con un archivo principal de configuración llamado el `nftables.conf` ubicado en `/etc`. Podemos inspeccionar este archivo para ver la configuración por defecto.
+
+> Editar el archivo `/etc/nftables.conf`
+
+    [ubuntu]$ sudo nano /etc/nftables.conf
+    
+    #!/usr/sbin/nft -f
+
+    flush ruleset
+
+    table inet filter {
+            chain input {
+                    type filter hook input priority 0;
+            }
+            chain forward {
+                    type filter hook forward priority 0;
+            }
+            chain output {
+                    type filter hook output priority 0;
+            }
+    }
+
+Veamos algunas partes del código:
+
+* `#!/usr/sbin/nft -f` - Le indica a `nft` ejecutar este script de reglas.
+* `flush ruleset` - Indica comenzar un nuevo conjunto de reglas (limpia otras reglas previas).
+* `table inet filter` - Crea una familia del protocolo `inet` de tipo `filter` (similar al `filter` de `iptables`).
+* `chain input` - Establece una cadena con un conjunto de reglas. En este caso recordando a INPUT de `iptables`.
+* `type filter hook input priority 0;` - Establece el tipo `filter`, con paquetes de entrada (`hook input`) y un nivel de prioridad.
+
+Algunos otros códigos que podrían contenerse podrían ser:
+
+* `iif lo accept` - Establece la regla similar a `-i lo -j ACCEPT` de `iptables` para aceptar los paquetes del host virtual (`loopback`).
+* `ct state established,related accept` - Sería la regla equivalente a `-m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT`
+* `tcp dport { 22, 80, 443 } ct state new accept` - Habilita los puertos `22` (`ssh`), `80` (`http`) y `443` (`https`) para las conexiones TCP.
+*  `counter drop` - Equivalente a `-j DROP` para rechazar las conexiones que no satisfagan las reglas anteriores.
+
+Cada archivo de configuración como el principal podrá ser cargado mediante `nft -f <path>/<file>.conf`.
+
+> Cargar el archivo principal a `nftables`
+
+    [ubuntu]$ sudo nft -f /etc/nftables.conf
+
+> Inspeccionar la tabla cargada en `nftables`
+
+    [ubuntu]$ sudo nft list table inet filter
+
+    table inet filter {
+            chain input {
+                    type filter hook input priority filter; policy accept;
+                    iif "lo" accept
+                    ct state established,related accept
+                    tcp dport { 22, 80, 443 } ct state new accept
+                    counter packets 0 bytes 0 drop
+            }
+
+            chain forward {
+                    type filter hook forward priority filter; policy accept;
+            }
+
+            chain output {
+                    type filter hook output priority filter; policy accept;
+            }
+    }
+
+Podemos agregar más reglas dentro de la cadena de reglas. Por ejemplo:
+
+    # Bloquea las direcciones IP al puerto 22/ssh
+
+    tcp dport 22 ip saddr { 192.168.0.7, 192.168.0.10 } drop
+
+---
+
+Una forma común de usar los `nftables` es a través de comando (o en la versión interactiva). Los comandos nos permitirán definir, modificar y eliminar reglas y tablas, de tal forma que podremos administrar de una forma cómoda nuestras reglas.
+
+A continuación se revisan algunos comandos interesantes.
+
+> Agregar una tabla a `nftables`
+
+    SINTAXIS: nft add table <family> <table>
+
+    # Aquí <family> puede tomar algún valor como:
+    # Familia en nftables   Equivalente en iptables
+    # -------------------   -----------------------------
+    # ip                    iptables
+    # ip6                   Ip6tables
+    # inet                  Iptables y ip6tables a la vez
+    # arp                   Arptables
+    # bridge                ebtables
+
+> Eliminar una tabla de `nftables`
+
+    SINTAXIS: nft delete table <family> <table>
+
+> Listar las tablas
+
+    SINTAXIS: nft list tables
+
+> Ver la información de una tabla
+
+    SINTAXIS: ntf list table <family> <table>
+
+    # Mostrar los `handle`
+
+    SINTAXIS: ntf list table <family> <table> -a
+
+> Agregar una cadena de reglas a una tabla
+
+    SINTAXIS: nft add chain <family> <table> <chain>
+
+    # Nota: <chain> generalmente se llama igual que el hook de la regla (`input`, `output`, `forward`, etc).
+
+    # Alternativamente podemos colocar algunas reglas iniciales
+
+    SINTAXIS: nft add chain <family> <table> <chain> { <rule 1>; <rule 2>; ... }
+
+    # Dentro de las reglas los hook para `inet`, `ip`, `ip6` pueden ser:
+    # input   - equivale a INPUT
+    # forward - equivale a FORWARD
+    # output  - equivale a OUTPUT
+
+> Modificar una cadena de reglas a una tabla
+
+    SINTAXIS: nft add chain <family> <table> <chain> { <rule 1>; <rule 2>; ... }
+
+> Eliminar una cadena de una tabla
+
+    # Advertencia: Para poder eliminar una cadena primero tendremos que vaciar sus reglas
+
+    # Vaciar las reglas de la cadena
+
+    SINTAXIS: ntf flush chain <family> <table> <chain>
+
+    # Eliminar la cadena
+
+    SINTAXIS: ntf delete chain <family> <table> <chain>
+
+> Agregar una regla a una cadena
+
+    SINTAXIS: nft add rule <family> <table> <chain> [position <position>] <declaration>
+
+    # Nota: position <position> insertará la regla en la posición, si no se especifica la agregará al final.
+
+    # Ejemplo:
+    # nft add rule inet my_table input tcp 22 ct new accept
+
+> Eliminar una regla a una cadena
+
+    SINTAXIS: nft delete rule <family> <table> <chain> handle <handle>
+
+    # Nota: handle <handle> indica la regla a eliminar.
+
+En la práctica, es mejor manipular directamente los archivos `.conf`, al menos que se desee hacer un cambio específico sobre alguna regla rápidamente y sin estar planeada dentro del archivo de configuración. Podemos usar `nft list table <family> <table> > <path>/<file>.conf` para guardar la configuración actual de la table en el archivo `<file>.conf`.
 
 [REFERENCIAS]
 
@@ -1242,6 +1411,7 @@ Ahora revisemos algunas operaciones comúnes para trabajar las zonas y los servi
 * [https://www.booleanworld.com/depth-guide-iptables-linux-firewall/](https://www.booleanworld.com/depth-guide-iptables-linux-firewall/)
 * [https://www.digitalocean.com/community/tutorials/how-to-implement-a-basic-firewall-template-with-iptables-on-ubuntu-14-04](https://www.digitalocean.com/community/tutorials/how-to-implement-a-basic-firewall-template-with-iptables-on-ubuntu-14-04)
 * [https://www.digitalocean.com/community/tutorials/how-to-set-up-a-firewall-using-firewalld-on-centos-7](https://www.digitalocean.com/community/tutorials/how-to-set-up-a-firewall-using-firewalld-on-centos-7)
+* [https://www.redeszone.net/tutoriales/seguridad/nftables-firewall-linux-configuracion/](https://www.redeszone.net/tutoriales/seguridad/nftables-firewall-linux-configuracion/)
 
 ---
 
