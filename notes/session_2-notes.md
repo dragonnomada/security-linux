@@ -1,4 +1,4 @@
-# Sesión 1 - Seguridad, Usuarios y Firewall
+# Sesión 2 - Encriptación y Control de Acceso
 
 ## Agenda
 
