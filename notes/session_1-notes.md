@@ -429,6 +429,10 @@ En *RHEL/CentOS* el grupo de administradores por defecto es llamado `wheel`, mie
 
 Podemos agregar nuevos usuarios mediante `useradd`, especificando opcionalmente su grupo, su carpeta *HOME* y la terminal usada. Si el grupo no existe previamente, este será creado automáticamente, si no se especifica su nombre será igual que el nombre del usuario. Si la carpeta *HOME* no se establece, este usuario no tendrá carpeta principal. Y si la terminal no se estable se usará la terminal `/bin/sh`.
 
+> Agregar un nuevo grupo de usuarios con `groupadd [options] <group>`
+
+    [linux]# groupadd test
+
 > Agregar un usuario nuevo con `useradd [options] <user>`
 
     [linux]# useradd demo
