@@ -980,19 +980,253 @@ Veamos el mismo ejemplo del reporte como quedaría.
 
 ### Introducción a las ACL (Access Control Lists)
 
-    TODO
+Las Listas de Control de Acceso (Access Control Lists / `ACL`) nos permiten establecer permisos más específicos que `chmod` para nuestros recursos, para otorgar accesos a usuarios o grupos específicos.
+
+Esto nos da la granularidad necesaria para trabajar proteger nuestros recursos de una forma bastante sencilla y sin complicarnos mucho, evitando unir a los usuarios a grupos específicos.
+
+Lo primero será instalar el paquete `acl` que provee a `getfacl` y `setfacl`.
+
+> Instalar `acl`
+
+    [linux]# apt install acl
+
+Con `getfacl` (*get file access control lists*) podemos obtener información más detallada del recurso, como el usuario propietario, el grupo propietario, los permisos `ugo` (*user, group, others*) y la lista ACL definida para el archivo si posee una.
+
+> Usar `getfacl` para consultar el ACL de un recurso
+
+    SINTAXIS: getfacl [options] <resource>
+
+    EJEMPLO:
+
+    # Creamos un archivo nuevo llamado `demo.txt`
+
+    [linux]$ touch demo.txt
+
+    # Consultamos sus permisos mediante `ls -l`
+
+    [linux]$ ls -l demo.txt
+    
+    >>> -rw-rw-r-- 1 ubuntu ubuntu 0 Feb 26 19:12 demo.txt
+
+    # Observamos: 
+    #   * El usuario propietario puede leer y escribir
+    #   * El grupo propietario puede leer y escribir
+    #   * Otros pueden leer
+
+    # Consultamos sus permisos mediante `getfacl`
+
+    [linux]$ getfacl demo.txt
+
+    # file: demo.txt
+    # owner: ubuntu
+    # group: ubuntu
+    user::rw-
+    group::rw-
+    other::r--
+
+    # Observamos: 
+    #   * El usuario propietario es `ubuntu`
+    #   * El grupo propietario es `ubuntu`
+    #   * El usuario propietario puede leer y escribir
+    #   * El grupo propietario puede leer y escribir
+    #   * Otros pueden leer
+
+Cuando un usuario crea recursos, el se vuelve el propietario, junto a su grupo y se otorgan los permisos por defecto para leer y escribir, tanto para el usuario, como para el grupo.
+
+Antes de usar las listas de control de acceso (*ACL*), vamos a quitar los permisos para el grupo y para otros, de esta manera iremos granularmente otorgando los permisos necesarios, según lo planeemos. Entonces, dejaremos sólo los permisos de lectura y escritura para el usuario propietario y los demás ninguno (modo `600` / `u=rw,g=,o=`).
+
+> Dejar unicamente los permisos para el propietario
+
+    [linux]$ chmod 600 demo.txt
+
+    [linux]$ ls -l demo.txt
+
+    >>> -rw------- 1 ubuntu ubuntu 0 Feb 26 19:12 demo.txt
+
+    [linux]$ getfacl demo.txt
+
+    # file: demo.txt
+    # owner: ubuntu
+    # group: ubuntu
+    user::rw-
+    group::---
+    other::---
 
 ### Listas de acceso a usuarios y grupos
 
-    TODO
+Las Listas de Control de Acceso (*ACL*) nos permiten otorgar permisos específicos mediante `setfacl`. Por ejemplo, en un escenario sobre nuestro archivo `demo.txt` queremos darle permisos de lectura al usuario `roboto` y permisos de lectura y ejecución al grupo `soporte`. Esto no se lograría usando `chmod`, ya que el usuario propietario es `ubuntu` y no queremos que esto cambie, tampoco queremos cambiar al grupo propietario (igulamente `ubuntu`).
+
+> Otorgar permisos granulares a usuarios y grupos con `setfacl`
+
+    SINTAXIS: setfacl [options] [ -m | -x <spec> ] <resource>
+
+    # Donde:
+    #   * -m significa modificar el permiso (también `-M`)
+    #   * -x significa borrar el permiso (también `-X`)
+    #   * <spec> es la especificación del permiso
+    #       - u:<user>:<mode> 
+    #       - g:<group>:<mode> 
+    #       - o:<mode> 
+    #       - m:<mode> 
+    #       -- u | user
+    #       -- g | group
+    #       -- o | other
+    #       -- m | mask
+    #       -- <mode> puede ser simbólico (`rwx`), numérico o sin permisos (`-`)
+
+    EJEMPLO:
+
+    [linux]$ setfacl -m u:roboto:r demo.txt
+    
+    [linux]$ getfacl demo.txt
+    
+    # file: demo.txt
+    # owner: ubuntu
+    # group: ubuntu
+    user::rw-
+    user:roboto:r--
+    group::---
+    mask::r--
+    other::---
+
+    # Observa que sólo el propietario puede leer y escribir, pero el usuario `roboto` puede leer a `demo.txt`.
+
+    [linux]$ setfacl -m g:soporte:rx demo.txt
+    
+    [linux]$ getfacl demo.txt
+
+    # file: demo.txt
+    # owner: ubuntu
+    # group: ubuntu
+    user::rw-
+    user:roboto:r--
+    group::---
+    group:soporte:r-x
+    mask::r-x
+    other::---
+
+    # Observa que ahora le otorgamos permisos de lectura y escritura al grupo de `soporte`.
 
 ### Listas de acceso heredables en directorios
 
-    TODO
+Sobre las carpetas podemos ajustar permisos ACL por defecto que se apliquen a todos los archivos que se creen en el directorio. Por ejemplo, un escenario es cuándo queremos que todos los archivos que descargue el usuario `ubuntu`, estén disponibles para su lectura con el usuario `roboto` y para su ejecución para el grupo `pruebas`. Bastará con poner una `d:` antes del permiso en `setfacl` (por ejemplo, `setfacl -m d:u:roboto:r <directory>`).
+
+> Crear permisos heredables en directorios
+
+    SINTAXIS: setfacl -m d:<spec> <folder>
+
+    EJEMPLO:
+
+    [linux]$ mkdir downloads
+
+    [linux]$ setfacl -m d:u:roboto:r downloads/
+
+    [linux]$ setfacl -m d:g:pruebas:x downloads/
+
+    [linux]$ getfacl downloads/
+
+    # file: downloads/
+    # owner: ubuntu
+    # group: ubuntu
+    user::rwx
+    group::rwx
+    other::r-x
+    default:user::rwx
+    default:user:roboto:r--
+    default:group::rwx
+    default:group:pruebas:--x
+    default:mask::rwx
+    default:other::r-x
+
+    # Si queremos proteger los archivos de `downloads` de otros usuarios, incluso dentro del mismo grupo podemos cambiar los permisos por defecto heredados.
+
+    [linux]$ setfacl -m d:u::rw downloads/
+
+    [linux]$ setfacl -m d:g::- downloads/
+
+    [linux]$ setfacl -m d:o::- downloads/
+
+    [linux]$ getfacl downloads/
+
+    # file: downloads/
+    # owner: ubuntu
+    # group: ubuntu
+    user::rwx
+    group::rwx
+    other::r-x
+    default:user::rw-
+    default:user:roboto:r--
+    default:group::---
+    default:group:pruebas:--x
+    default:mask::r-x
+    default:other::---
+
+    # Observa que ahora los archivos que se creen sólo podrán ser leídos y escritos por el usuario propietario, leídos por el usuario `roboto` y ejecutados por los usuarios del grupo `pruebas`
+
+    [linux]$ cd downloads/
+
+    [linux]$ wget linux.org
+
+    [linux]$ ls -l
+
+    >>> -rw-r-----+ 1 ubuntu ubuntu 93592 Feb 26 20:32 index.html
+
+    [linux]$ getfacl index.html
+
+    # file: index.html
+    # owner: ubuntu
+    # group: ubuntu
+    user::rw-
+    user:roboto:r--
+    group::---
+    group:pruebas:--x               #effective:---
+    mask::r--
+    other::---
+
+    # Ahora podemos el contenido con el usuario `roboto`
+
+    [roboto@linux]$ head -7 index.html | tail -1
+
+    >>> <title>Linux.org</title>
+
+    # Pero cualquier otro usuario no podrá
+
+    [demo@linux]$ head -7 index.html | tail -1
+
+    >>> head: cannot open 'index.html' for reading: Permission denied
+
+Ahora ya podemos crear directorios con listas de permisos heredables proteger los archivos que sean dispuestos ahí. Si algún archivo fuera copiado, podríamos actualizar sus permisos con `getfacl -d . | setfacl --set-file=- <file>` (que copiará los permisos por defecto de la carpeta actual `.` hacia el archivo).
+
+* **Nota:** Si queremos resetear los permisos por defecto de una carpeta a todos sus archivos podemos hacer `getfacl -d <folder> | setfacl -R --set-file=- <folder>`.
+
+> Resetear los permisos por defecto de una carpeta a todos sus archivos
+
+    SINTAXIS: getfacl -d <folder> | setfacl -R --set-file=- <folder>
 
 ### Permisos específicos en la máscara del ACL
 
-    TODO
+La máscara de permisos es un filtro final, que es calculada para el recurso y podemos observar con `getfacl`.
+
+Por ejemplo, para un archivo tenemos los permisos de la siguiente tabla, se generará la máscara descrita.
+
+Permiso | Descripción
+--- | ---
+`u:roboto:rw` | Usuario `roboto` puede leer y escribir
+`u:demo:w` | Usuario `demo` puede escribir
+`u:ubuntu:wx` | Usuario `ubuntu` puede escribir y ejecutar
+`g:sporte:x` | Grupo `soporte` puede ejecutar
+
+La máscara resultante será `rwx`.
+
+Ahora pensemos en un escenario donde queramos desactivar la escritura del archivo, sin tener que remover las entradas para los usuarios a los que se les otorgó permisos de escritura. Entonces, en este panorama podemos modificar la máscara, para deshabilitar la escritura, sin tener que eliminar las especificaciones.
+
+> Modificar la máscara para desactivar la escritura
+
+    SINTAXIS: setfacl -m m::rx <resource>
+
+    ALTERNATIVA: setfacl -m mask::rx <resource>
+
+De esta manera ahora los usuarios no podrán escribir aunque se les haya dado el permiso anteriormente.
 
 ### Directorios compartidos
 
