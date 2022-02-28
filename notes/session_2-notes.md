@@ -1230,27 +1230,397 @@ De esta manera ahora los usuarios no podrán escribir aunque se les haya dado el
 
 ### Directorios compartidos
 
-    TODO
+En las carpetas compartidas podemos asignar un usuario y grupo diseñados para darle propiedad a la carpeta con el usuario `nobody` y el grupo que deseemo (`chown nobody:<group> <folder>`). Esto provocará que ningún usuario como tal sea el propietario, siendo útil para especificar que el propietario de la carpeta es el grupo.
+
+El uso del bit *SGID* (de los permisos especiales) nos permitirá hacer que todos los archivos creados o dispuestos en la carpeta tengan como grupo el mismo que la carpeta. Es decir, los archivos contenidos tendrán el grupo de la carpeta y no el grupo de los usuarios. Esto será útil en escenarios diseñados para dar permisos por grupos sobre la carpeta compartida. Para activar el *SGID bit* usaremos el modo `2000 + <mode>`, por ejemplo, `chmod 2770 <folder>` permitirá `rwx` para propietarios y el grupo.
+
+El uso del bit *Sticky* (de los permisos especiales) nos impedirá borrar los archivos de 
+
+> Activación de permisos especiales para una carpeta compartida
+
+    SINTAXIS: chmod <special><mode> <resource>
+
+    # Donde <special> puede ser:
+    # 1 - Sticky bit (impide borrar)
+    # 2 - SGID bit (mismo grupo)
+    # 3 - Sticky + SGID
+    # 4 - SUID bit (mismo usuario, no recomendado)
+    # 5 - Sticky + SUID
+    # 6 - SGID + SUID
+    # 7 - Sticky + SGID + SUID
+
+    # Donde <mode> es el modo numérico
+
+    # Podemos activar o desactivar manualmente los bits especiales
+
+    Sticky: chmod +t / -t <resource>
+    SGID:   chmod g+s / g-s <resource>
+    SUID:   chmod u+s / u-s <resource>
+
+* **Nota:** Si algún archivo perdiera la autoría del grupo, podemos recursivamente volver a establecer el grupo para todos los archivos con `chgrp -R marketing /marketing`.
+
+Veamos un ejemplo de una carpeta compartida para miembros del grupo de Marketing.
+
+> Compartir una carpeta para los usuarios del grupo `marketing`
+
+    [linux]# mkdir /marketing
+    
+    [linux]# chown nobody:marketing /marketing
+    
+    # Impide borrar archivos de otros
+
+    [linux]# chmod +t /marketing
+
+    # Asigna el grupo `marketing` a nuevos archivos
+
+    [linux]# chmod g+s /marketing
+
+    # Permite `rwx` a propietarios y grupo `marketing`
+
+    [linux]# chmod 770 /marketing
+
+    # Alternativo: chmod 3770 /marketing
+
+Con esto nuestra carpeta `/marketing` será compartida de forma segura entre todos los miembros del grupo `marketing`. Cada usuario podrá crear y borrar sus propios archivos, pero no los archivos de otros. A otros usuarios fuera del grupo `marketing` no se les dará acceso a la carpeta.
+
+Finalmente, podemos también usar los permisos *ACL* para proteger archivos dentro de la carpeta compartida. Por ejemplo, vamos a suponer que el usuario `pedro` que es Líder de Marketing tiene la nómina de los empleados (`nomina.txt`) en la carpeta compartida y sólo la quiere compartir con los usuarios `lisa` y `clara` que llevan la contabilidad y recursos humanos respectivamente.
+
+> Restringir archivos con ACL en carpetas compartidas
+
+    # Pedro (Líder de Marketing)
+
+    [pedro@linux]$ chmod 700 nomina.txt
+
+    [pedro@linux]$ setfacl -m u:lisa:rwx nomina.txt
+
+    [pedro@linux]$ setfacl -m u:clara:rx nomina.txt
+
+    # Lisa (Contabilidad)
+
+    [lisa@linux]$ nano nomina.txt
+
+    >>> (Lectura, Escritura y Ejecución)
+
+    # Clara (Recursos humanos)
+
+    [clara@linux]$ nano nomina.txt
+
+    >>> (Sólo Lectura y Ejecución)
+
+    # Junior (Becario de Marketing)
+
+    [junior@linux]$ nano nomina.txt
+
+    >>> Permission denied
 
 [REFERENCIAS]
 
 * [https://linux.die.net/man/1/chown](https://linux.die.net/man/1/chown)
 * [https://linux.die.net/man/1/chmod](https://linux.die.net/man/1/chmod)
+* [https://www.redhat.com/sysadmin/suid-sgid-sticky-bit](https://www.redhat.com/sysadmin/suid-sgid-sticky-bit)
+* [https://www.ochobitshacenunbyte.com/2019/06/17/permisos-especiales-en-linux-sticky-bit-suid-y-sgid/](https://www.ochobitshacenunbyte.com/2019/06/17/permisos-especiales-en-linux-sticky-bit-suid-y-sgid/)
 
 ## Control de Acceso con SELinux
 
 ### Introducción a SELinux
 
-    TODO
+**SELinux** es un proyecto open source gratuito desarrollado por la NSA (*National Security Agency / Agencia Nacional de Seguridad*) de los Estados Unidos. Esta viene activada en *RHEL/CentOS*, pero se puede instalar en cualquier otra distribución.
+
+Hay tres usos comunes que se le puede dar a *SELinux*.
+
+* Se puede usar para ayudar a prevenir que intrusos exploten/dañen el sistema.
+* Se puede utilizar para garantizar que solo los usuarios con la autorización de seguridad adecuada puedan
+acceder a archivos que están etiquetados con una clasificación de seguridad.
+* Además de MAC (*Mandatory Access Control*), provee un tipo basado en roles de acceso (`RBAC` / *Role Based Access Controls*).
+
+En estas notas sólo usaremos a *SELinux* para ayudar a prevenir que intrusos exploten el sistema, que es la forma más común de usarlo. Los otros puntos requerirían un estudio completo.
+
+> Instalación de SELinux
+
+    [ubuntu]# apt install selinux-utils
+
+> Verficar si SELinux está deshabilitado
+
+    [linux]$ selinuxenabled; echo $?
+
+    # 1 - Deshabilitado
+    # 0 - Habilitado
+
+> Instalación de `policycoreutils`
+
+    [ubuntu]# apt install policycoreutils
+
+> Verificar si SELinux está activado con `sestatus`
+
+    [linux]$ sestatus
+
+    >>> SELinux status:                 disabled
+
+* **ADVERTENCIA:** *Debian/Ubuntu* cuenta con *AppArmor* como alternativa a *SELinux*. Además *SELinux* se encuentra en estado experimental. Antes de activarlo es se tiene desactivar *AppArmor*.
+
+En *RHEL/CentOS* ya viene activado por defecto.
+
+    [rhel]# sestatus
+
+    SELinux status:                 enabled
+    SELinuxfs mount:                /sys/fs/selinux
+    SELinux root directory:         /etc/selinux
+    Loaded policy name:             targeted
+    Current mode:                   enforcing
+    Mode from config file:          enforcing
+    Policy MLS status:              enabled
+    Policy deny_unknown status:     allowed
+    Memory protection checking:     actual (secure)
+    Max kernel policy version:      33
+
+[REFERENCIAS]
+
+* [https://www.linux.com/news/securing-linux-mandatory-access-controls/](https://www.linux.com/news/securing-linux-mandatory-access-controls/)
 
 ### Configuración de los contextos de seguridad
 
-    TODO
+*SELinux* provee un sistema etiquetas para archivos y carpetas conocidas como *Contextos de Seguridad* (*Security Contexts*). Las cuales extienden los atributos de los recursos. También agrega el mismo tipo de etiquetas a los procesos de sistema y son conocidas como *Dominos* (*Domains*).
+
+Podemos ver los dominios y conextos usando el atributo `-Z` en los comandos `ls` (listado de archivos) y `ps` (listado de procesos).
+
+> Ver las etiquetas de los archivos con `ls -Z`
+
+    SINTAXIS: ls -Z
+
+    EJEMPLO:
+
+    [rhel]# ls -Z
+
+    system_u:object_r:admin_home_t:s0 anaconda-ks.cfg
+    unconfined_u:object_r:admin_home_t:s0 ecryptfs-utils-111-19.1.el8.elrepo.x86_64.rpm
+    unconfined_u:object_r:admin_home_t:s0 elrepo-release-8.2-1.el8.elrepo.noarch.rpm
+    unconfined_u:object_r:admin_home_t:s0 epel-release-8-14.el8.noarch.rpm
+
+> Ver las etiquetas de los procesos con `ps -Z`
+
+    SINTAXIS: ps -Z
+
+    EJEMPLO:
+
+    [rhel]# ps -Z
+
+    LABEL                               PID TTY          TIME CMD
+    unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 1634 pts/0 00:00:00 bash
+    unconfined_u:unconfined_r:unconfined_t:s0-s0:c0.c1023 1827 pts/0 00:00:00 ps
+
+Inspeccionemos las etiquetas:
+
+* **SELinux user** - generalmente `unconfined_u`
+* **SELinux role** - generalmente `object_r` (en `ls`) y `unconfined_r` (en `ps`)
+* **type** - generalmente `user_home_t` o `admin_home_t` (en `ls`) y `unconfined_t` (en `ps`)
+* **sensitivity** - generalmente `s0` (en `ls`) y `s0-s0` (en `ps`)
+* **category** - generalmente `c0.c1023` (sólo en `ps`)
+
+Adicionalmente a **SELinux** debemos instalar las herramientas de administración por separado.
+
+> Instalar las herramientas de `SELinux`
+
+    [rhel]# yum install setools policycoreutils policycoreutils-python-utils
+
+> Instalar el comprobador de errores
+
+    [rhel]# yum install setroubleshoot
+
+    # Reiniciar el servicio `auditd`
+
+    [rhel]# service auditd restart
+
+Para poner un ejemplo práctico instalaremos Apache para proveer servicios web con *SELinux* activado.
+
+> Instalar y activar Apache
+
+    [rhel]# yum install httpd
+
+    # Activa e inicia el servicio `httpd`
+
+    [rhel]# systemctl enable --now httpd
+
+> Agregar al `firewall` el puerto de `http`
+
+    [rhel]# firewall-cmd --permanent --add-service=http
+
+    # Aplicar los cambios
+
+    [rhel]# firewall-cmd --reload
+
+> Verificar la información del proceso Apache
+
+    [rhel] ps ax -Z | grep httpd
+
+    system_u:system_r:httpd_t:s0       3870 ?        Ss     0:00 /usr/sbin/httpd -DFOREGROUND
+    system_u:system_r:httpd_t:s0       3871 ?        S      0:00 /usr/sbin/httpd -DFOREGROUND
+    system_u:system_r:httpd_t:s0       3872 ?        Sl     0:00 /usr/sbin/httpd -DFOREGROUND
+    system_u:system_r:httpd_t:s0       3873 ?        Sl     0:00 /usr/sbin/httpd -DFOREGROUND
+    system_u:system_r:httpd_t:s0       3874 ?        Sl     0:00 /usr/sbin/httpd -DFOREGROUND
+
+> Tabla de Etiquetas SELinux (Dominio)
+
+Etiqueta | Valor
+--- | ---
+**user** | `system_u`
+**role** | `system_r`
+**type** | `httpd_t`
+**sensitivity** | `s0`
+
+**TIPO:** `httpd_t`
+
+Apache expone la carpeta de contenido web en `/var/www/html`. Podemos inspeccionarla.
+
+    [rhel]# ls -ld -Z /var/www/html/
+
+    >>> drwxr-xr-x. 2 root root system_u:object_r:httpd_sys_content_t:s0 6 nov 11 23:58 /var/www/html/
+
+> Tabla de Etiquetas SELinux (Contexto)
+
+Etiqueta | Valor
+--- | ---
+**user** | `system_u`
+**role** | `object_r`
+**type** | `httpd_sys_content_t`
+**sensitivity** | `s0`
+
+**TIPO:** `httpd_sys_content_t`
+
+Ahora modifiquemos el contenido web del `index.html`.
+
+    [rhel]# nano /var/www/html/index.html
+    
+    ---
+    <h1>Apache Funciona! Prueba de SELinux</h1>
+    ---
+
+    [rhel]# ls -Z /var/www/html/index.html
+
+    >>> unconfined_u:object_r:httpd_sys_content_t:s0 /var/www/html/index.html
+
+    [rhel]# curl localhost
+
+    >>> <h1>Apache Funciona! Prueba de SELinux</h1>
+
+Si ahora creamos ese mismo index en la carpeta HOME y luego copiamos el archivo a la carpeta `/var/www/html`, veremos que el archivo no funcionará ya que el tipo será `admin_home_t` en lugar de `httpd_sys_content_t`.
+
+    [rhel]# echo '<h1>Apache No Funciona!!!</h1>' > index.html
+    
+    [rhel]# ls -Z index.html
+
+    >>> unconfined_u:object_r:admin_home_t:s0 index.html
+
+    [rhel]# mv index.html /var/www/html/
+    
+    >>> mv: ¿sobreescribir '/var/www/html/index.html'? (s/n) <<s>>
+
+    [rhel]# curl -I localhost
+
+    HTTP/1.1 403 Forbidden
+    Date: Sun, 27 Feb 2022 01:58:01 GMT
+    Server: Apache/2.4.37 (centos)
+    Last-Modified: Sun, 27 Jun 2021 23:47:13 GMT
+    ETag: "30c0b-5c5c7fdeec240"
+    Accept-Ranges: bytes
+    Content-Length: 199691
+    Content-Type: text/html; charset=UTF-8
+
+Observamos que ahora la página no funciona, por violar el contexto de Apache. Podemos corregir el problema mediante `chcon`.
+
+    [rhel]# chcon -t httpd_sys_content_t /var/www/html/index.html
+
+    [rhel]# ls -Z /var/www/html/index.html
+
+    >>> unconfined_u:object_r:httpd_sys_content_t:s0 /var/www/html/index.html
+
+    [rhel]# curl localhost
+
+    >>> <h1>Apache No Funciona!!!</h1>
+    
+    [rhel]# curl -I localhost
+    
+    HTTP/1.1 200 OK
+    Date: Sun, 27 Feb 2022 02:01:00 GMT
+    Server: Apache/2.4.37 (centos)
+    Last-Modified: Sun, 27 Feb 2022 01:54:08 GMT
+    ETag: "1f-5d8f635232de7"
+    Accept-Ranges: bytes
+    Content-Length: 31
+    Content-Type: text/html; charset=UTF-8
+
+Una vez corregido, el sistema volverá a funcionar.
 
 ### Políticas de Seguridad de SELinux
 
-    TODO
+Las políticas de seguridad en SELinux parten de activaciones booleanas que permiten o bloquean la capacidad de realizar alguna cosa dentro del sistema.
 
+Los *booleans* pueden ser consultadas por el comando `getsebool -a` o `getsebool <policy>`.
+
+    [linux]$ getsebool -a
+
+    abrt_anon_write --> off
+    abrt_handle_event --> off
+    ...
+    zoneminder_anon_write --> off
+    zoneminder_run_sudo --> off
+
+La mayoría de los procesos tienen políticas establecidas para hacer bloqueos automáticos. Por ejemplo, en Apache y Samba no se podrá acceder a los archivos contenidos en las carpetas HOME de los usuarios.
+
+Si por algún motivo decidieramos cambiar estas políticas, bastaría establecer su valor `on` en lugar de `off` mediante el comando `setsebool <policy> on`.
+
+> Ejemplo: Activar los directorios de usuario en Samba
+
+    [linux]# setsebool samba_enable_home_dirs on
+
+    # Ver el efecto de la activación
+
+    [linux]$ getsebool samba_enable_home_dirs
+
+    >>> samba_enable_home_dirs --> on
+
+    # NOTA: La opción -P hará permanente el cambio, ya que este sólo se aplicará antes del reinicio del sistema (será temporal).
+
+---
+
+En algunos casos será necesario revisar la lista de puertos permitidos por SELinux y agregar o bloquear más puertos. Por ejemplo, para ver los puertos disponibles para Apache tenemos el tipo `http_port_t`. Mediante `semanage port -l` podremos consultar los puertos y decidir agregar o eliminar puertos.
+
+    [linux]# semanage port -l
+
+    Tipo de Puerto SELinux         Proto    Número de Puerto
+
+    afs3_callback_port_t           tcp      7001
+    afs3_callback_port_t           udp      7001
+    ...
+    zookeeper_leader_port_t        tcp      2888
+    zope_port_t                    tcp      8021
+
+> Agregar un puerto TCP para `http_port_t`
+
+    [linux]# semanage port -a 82 -t http_port_t -p tcp
+
+    [linux]# semanage port -l | grep 'http_port_t'
+
+    >>> http_port_t                    tcp      82, 80, 81, 443, 488, 8008, 8009, 8443, 9000
+
+    # NOTA: Usa `systemctl restart httpd` para aplicar el cambio
+
+> Eliminar un puerto TCP para `http_port_t`
+
+    [linux]# semanage port -d 82 -t http_port_t -p tcp
+
+    [linux]# semanage port -l | grep 'http_port_t'
+
+    >>> http_port_t                    tcp      80, 81, 443, 488, 8008, 8009, 8443, 9000
+
+    # NOTA: Usa `systemctl restart httpd` para aplicar el cambio
+
+---
+
+Para crear nuevos módulos de políticas usaremos `udit2allow`.
+
+[REFERENCIAS]
+
+* [https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/using_selinux/writing-a-custom-selinux-policy_using-selinux](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/using_selinux/writing-a-custom-selinux-policy_using-selinux)
 
 ---
 
