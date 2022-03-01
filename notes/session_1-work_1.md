@@ -1,4 +1,4 @@
-# Trabajo 1 - Usuarios y Permisos
+# Sesión 1 / Trabajo 1 - Usuarios y Permisos
 
 > 1. Crear los usuarios y grupos
 
