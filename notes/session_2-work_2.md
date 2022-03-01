@@ -1,4 +1,4 @@
-# Sesión 2 / Trabajo 2 - Carpetas cifradas
+# Sesión 2 / Trabajo 2 - Carpetas cifradas y compartidas
 
 ## Introducción
 
@@ -6,19 +6,19 @@ En este trabajo generaremos una carpeta `/marketing` compartida para los miembro
 
 Es decir, todo lo que se cree en la carpeta `/marketing` estará descifrado y todo lo que se cree en la carpeta `/marketing-admin` quedará cifrado. Y sólo el administrador principal sabrá la contraseña de la carpeta `/marketing-admin`.
 
-> 1. Crear la carpeta `/marketing`
+> 1. Crear la carpeta `/marketing-shared`
 
-    [ubuntu]# mkdir /marketing
+    [ubuntu]# mkdir /marketing-shared
 
-> 2. Establecer la propiedad/autoría de `/marketing` al usuario `nobody` y al grupo `marketing`
+> 2. Establecer la propiedad/autoría de `/marketing-shared` al usuario `nobody` y al grupo `marketing`
 
     [ubuntu]# groupadd marketing
 
-    [ubuntu]# chown nobody:marketing /marketing
+    [ubuntu]# chown nobody:marketing /marketing-shared
 
 > 3. Establecer los permisos de `/marketing` completos al grupo de `marketing`
 
-    [ubuntu]# chmod 070 /marketing
+    [ubuntu]# chmod 070 /marketing-shared
 
 > 4. Crear un usuario en el grupo `marketing` que genere algunos archivos de prueba
 
@@ -30,13 +30,17 @@ Es decir, todo lo que se cree en la carpeta `/marketing` estará descifrado y to
 
     [ubuntu]# su - ana
 
-    [ana@ubuntu]$ cd /marketing
+    [ana@ubuntu]$ cd /marketing-shared
 
-    [ana@ubuntu /marketing]$ echo "hola soy ana" > ana.txt
+    [ana@ubuntu /marketing-shared]$ echo "hola soy ana" > ana.txt
 
-> 5. Crear la carpeta `/marketing-admin` para los administradores
+> 5. Crear la carpeta `/marketing-admin` para los administradores y la subcarpeta `shared` dónde se montará `/marketing`
 
     [ubuntu]# mkdir /marketing-admin
+
+    [ubuntu]# mkdir /marketing-admin/shared
+
+    # NOTA: mkdir -p /marketing-admin/shared
 
 > 6. Establecer la propiedad/autoría de `/marketing-admin` al usuario `nobody` y al grupo `marketing-admin`
 
@@ -48,11 +52,11 @@ Es decir, todo lo que se cree en la carpeta `/marketing` estará descifrado y to
 
     [ubuntu]# chmod 070 /marketing-admin
 
-> 8. Montar la carpeta `/marketing` en la carpeta `/marketing-admin`
+> 8. Montar la carpeta `/marketing-shared` en la carpeta `/marketing-admin/shared`
 
     # apt install ecryptfs
 
-    [ubuntu]# mount -t ecryptfs /marketing /marketing-admin
+    [ubuntu]# mount -t ecryptfs /marketing-shared /marketing-admin/shared
 
 > 9. Crear un usuario en el grupo `marketing-admin` que genere algunos archivos de prueba
 
@@ -64,14 +68,28 @@ Es decir, todo lo que se cree en la carpeta `/marketing` estará descifrado y to
 
     [ubuntu]# su - bety
 
-    [bety@ubuntu]$ cd /marketing-admin
+    [bety@ubuntu]$ cd /marketing-admin/shared
 
-    [bety@ubuntu /marketing-admin]$ echo "hola soy bety" > bety.txt
+    [bety@ubuntu /marketing-admin/shared]$ echo "hola soy bety" > bety.txt
 
 > 10. Intentar leer el contenido de `/marketing/bety.txt` con el usuario `ana`
 
-    [ana@ubuntu /marketing]$ cat bety.txt
+    [ana@ubuntu /marketing-shared]$ cat bety.txt
 
     >>> [CÓDIGO CIFRADO / BYTES CIFRADOS]
 
-* **NOTA:** Ambos usuarios (los del grupo `marketing` y los del grupo `marketing-admin`) están trabajando sobre la misma carpeta (`/marketing`), pero los administradores acceden a `/marketing-admin` que hace que todos los archivos que escriban ellos desde ahí queden crifrados para los usuarios con acceso normal a `/marketing`.
+> 11. Agregar los permisos especiales a `/marketing-shared` (Sticky y SGID)
+
+    [ubuntu]# chmod 3070 /marketing-shared
+
+    # NOTA: Impide borrar no propios y el grupo propietario sería `marketing` para nuevos archivos.
+
+> 12. Establecer los permisos ACL por defecto de `/marketing-shared`
+
+    [ubuntu]# setfacl -m d:u::rw /marketing-shared
+    [ubuntu]# setfacl -m d:g::- /marketing-shared
+    [ubuntu]# setfacl -m d:o::- /marketing-shared
+
+> 13. Verificar que entre usuarios no puedan borrar, leer, escribir ni ejecutar archivos que no sean suyos.
+
+* **NOTA:** Ambos usuarios (los del grupo `marketing` y los del grupo `marketing-admin`) están trabajando sobre la misma carpeta (`/marketing-shared`), pero los administradores acceden a `/marketing-admin` que hace que todos los archivos que escriban ellos desde ahí queden crifrados para los usuarios con acceso normal a `/marketing-shared`.
