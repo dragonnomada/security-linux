@@ -1,0 +1,17 @@
+Grupos:
+
+marketing: ana, karen, bety
+rh:        juan, pepe
+sales:     paco, luis, karen
+dev:       bety, pedro
+security:  pedro
+
+Usuarios:
+ana   - Líder Marketing
+karen - Líder Estragia de Ventas
+bety  - Diseñadora
+pedro - Líder de Desarrollo
+paco  - Becario de Ventas
+luis  - Proveedor de Ventas
+juan  - Jefe de RH
+pepe  - Ayudante de RH
