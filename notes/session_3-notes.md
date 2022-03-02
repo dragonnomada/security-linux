@@ -649,7 +649,11 @@ Ahora podremos ir a en un navegador la ruta `http://localhost:9392` y poner como
 
 > Instalar *Nikto* en *RHEL/CentOS*
 
-    [rhel]# yum install nikto perl-Net-SSLeay
+    [rhel]# yum install perl-Net-SSLeay -y
+
+    [rhel]# dnf install https://extras.getpagespeed.com/release-latest.rpm -y
+
+    [rhel]# dnf install nikto -y
 
 Ahora podemos actualizar *Nikto* mediante `nikto -update`.
 
