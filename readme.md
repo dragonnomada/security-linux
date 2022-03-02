@@ -117,3 +117,7 @@ He impartido cursos de Programación Avanzada en múltiples lenguajes de program
 **CentOS 8 Stream ISO** - http://ftp.ussg.iu.edu/linux/centos/8-stream/isos/x86_64/CentOS-Stream-8-x86_64-latest-boot.iso
 
 **MobaXterm Portable** - https://download.mobatek.net/2152021112100754/MobaXterm_Portable_v21.5.zip
+
+### Referencias
+
+* [https://access.redhat.com/documentation/es-es/red_hat_enterprise_linux/8/html/security_hardening/index](https://access.redhat.com/documentation/es-es/red_hat_enterprise_linux/8/html/security_hardening/index)
